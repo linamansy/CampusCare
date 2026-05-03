@@ -19,8 +19,33 @@ exports.createIssue = async (req, res) => {
       return res.status(400).json({ error: 'Missing fields' });
     }
 
+    const parsedUserId = parseInt(userId, 10);
+    if (Number.isNaN(parsedUserId)) {
+      return res.status(400).json({ error: 'Invalid userId' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: parsedUserId } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const role = (user.role || '').toLowerCase();
+    if (!role.includes('community')) {
+      return res.status(403).json({ error: 'Only Community Members can submit issues' });
+    }
+
+    const imagePath = req.file ? `/uploads/issues/${req.file.filename}` : null;
+
     const issue = await prisma.issue.create({
-      data: { title, description, category, location, userId }
+      data: {
+        title: title.trim(),
+        description: description.trim(),
+        category: category.trim(),
+        location: location.trim(),
+        image: imagePath,
+        status: 'Open',
+        userId: parsedUserId
+      }
     });
 
     res.status(201).json(issue);
