@@ -5,6 +5,7 @@ const multer = require('multer');
 
 const router = express.Router();
 const controller = require('../controllers/todoController');
+const { verifyAuth } = require('../middleware/auth');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
 if (!fs.existsSync(uploadDir)) {
@@ -34,6 +35,8 @@ const upload = multer({
 });
 
 router.get('/', controller.getAllIssues);
-router.post('/', upload.single('image'), controller.createIssue);
+router.get('/user/:userId', verifyAuth, controller.getMyIssues);
+router.get('/:id', controller.getIssueById);
+router.post('/', verifyAuth, upload.single('image'), controller.createIssue);
 
 module.exports = router;
