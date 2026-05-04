@@ -28,3 +28,30 @@ exports.createIssue = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// GET issues for specific user
+exports.getUserIssues = async (req, res) => {
+  try {
+    const userId = parseInt(req.query.userId);
+    const { status } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
+    const where = { userId };
+
+    if (status) {
+      where.status = status;
+    }
+
+    const issues = await prisma.issue.findMany({
+      where
+    });
+
+    res.json(issues);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
