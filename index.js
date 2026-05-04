@@ -1,5 +1,10 @@
+<<<<<<< Updated upstream
 
 require('dotenv').config();console.log("INDEX RUNNING");
+=======
+require('dotenv').config();
+console.log("INDEX RUNNING");
+>>>>>>> Stashed changes
 
 process.chdir(__dirname);
 
