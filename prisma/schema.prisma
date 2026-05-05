@@ -17,16 +17,20 @@ model User {
 }
 
 model Issue {
-  id          Int     @id @default(autoincrement())
-  title       String
-  description String
-  status      String  @default("Pending")
-  category    String
-  location    String
-  userId      Int
-  user        User    @relation(fields: [userId], references: [id])
-  comments    Comment[]
-    assignedTo  Int?  
+  id                 Int       @id @default(autoincrement())
+  title              String    @db.VarChar(100)
+  description        String
+  status             String    @default("Open")
+  category           String
+  location           String    @db.VarChar(200)
+  completionPhotoUrl String?
+  createdAt          DateTime  @default(now())
+  image              String?
+  updatedAt          DateTime  @updatedAt
+  userId             Int
+  user               User      @relation(fields: [userId], references: [id])
+  comments           Comment[]
+  assignedTo         Int?
 }
 
 model Comment {

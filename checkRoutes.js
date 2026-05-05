@@ -1,16 +1,27 @@
 const app = require('./src/app');
 const routes = [];
-app._router.stack.forEach(mw => {
-  if (mw.route) {
-    const methods = Object.keys(mw.route.methods).join(',');
-    routes.push(methods.toUpperCase() + ' ' + mw.route.path);
-  } else if (mw.name === 'router') {
-    mw.handle.stack.forEach(r => {
-      if (r.route) {
-        const methods = Object.keys(r.route.methods).join(',');
-        routes.push(methods.toUpperCase() + ' ' + r.route.path);
+
+const routePrefixes = new Map([
+  [require('./src/routes/todoRoutes'), '/issues'],
+  [require('./src/routes/userRoutes'), '/users']
+]);
+
+const getStack = (router) => router?.stack || router?._router?.stack || router?.router?.stack || [];
+
+for (const layer of getStack(app)) {
+  if (layer.route) {
+    const methods = Object.keys(layer.route.methods).join(',');
+    routes.push(methods.toUpperCase() + ' ' + layer.route.path);
+  } else if (routePrefixes.has(layer.handle)) {
+    const prefix = routePrefixes.get(layer.handle);
+
+    for (const routeLayer of getStack(layer.handle)) {
+      if (routeLayer.route) {
+        const methods = Object.keys(routeLayer.route.methods).join(',');
+        routes.push(methods.toUpperCase() + ' ' + prefix + routeLayer.route.path);
       }
-    });
+    }
   }
-});
+}
+
 console.log(routes.join('\n'));
