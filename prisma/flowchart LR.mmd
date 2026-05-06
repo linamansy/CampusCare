@@ -1,0 +1,29 @@
+flowchart LR
+  P1["P1 Registration (all roles)"]
+  P2["P2 Login + Logout (all roles)"]
+  P3["P3 Submit Issue (CM)"]
+  P4["P4 My Issues + Status (CM)"]
+  P5["P5 Issue Details + Comments View"]
+  P6["P6 Manager Dashboard + Filtering"]
+  P7["P7 Manager Actions (assign/update/close)"]
+  P8["P8 Worker Actions (view/comment/progress/photo)"]
+
+  %% Foundations
+  P1 --> P4
+  P2 --> P4
+  P3 --> P4
+
+  P1 --> P5
+  P2 --> P5
+  P3 --> P5
+
+  P1 --> P6
+  P2 --> P6
+  P3 --> P6
+
+  P1 --> P7
+  P2 --> P7
+  P3 --> P7
+
+  %% Worker depends on assignments from P7
+  P7 --> P8
