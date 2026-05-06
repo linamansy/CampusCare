@@ -20,6 +20,7 @@ exports.getAllIssues = async (req, res) => {
       include: { user: true, comments: true },
       orderBy: { createdAt: 'desc' }
     });
+
     res.json({ success: true, count: issues.length, data: issues });
   } catch (error) {
     res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
@@ -31,22 +32,36 @@ exports.getIssueById = async (req, res) => {
   try {
     const { id } = req.params;
     const parsedId = parseInt(id, 10);
+
     if (Number.isNaN(parsedId)) {
-      return res.status(400).json({ error: 'Valid issue ID required', code: 'INVALID_ID' });
+      return res.status(400).json({
+        error: 'Valid issue ID required',
+        code: 'INVALID_ID'
+      });
     }
 
     const issue = await prisma.issue.findUnique({
       where: { id: parsedId },
-      include: { user: true, comments: true }
+      include: {
+        user: true,
+        comments: true
+      }
     });
 
     if (!issue) {
-      return res.status(404).json({ error: 'Issue not found', code: 'NOT_FOUND' });
+      return res.status(404).json({
+        error: 'Issue not found',
+        code: 'NOT_FOUND'
+      });
     }
 
     res.json({ success: true, data: issue });
+
   } catch (error) {
-    res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
   }
 };
 
@@ -55,8 +70,12 @@ exports.getMyIssues = async (req, res) => {
   try {
     const { userId } = req.params;
     const parsedUserId = parseInt(userId, 10);
+
     if (Number.isNaN(parsedUserId)) {
-      return res.status(400).json({ error: 'Valid userId required', code: 'INVALID_USER_ID' });
+      return res.status(400).json({
+        error: 'Valid userId required',
+        code: 'INVALID_USER_ID'
+      });
     }
 
     const issues = await prisma.issue.findMany({
@@ -65,9 +84,17 @@ exports.getMyIssues = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ success: true, count: issues.length, data: issues });
+    res.json({
+      success: true,
+      count: issues.length,
+      data: issues
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
   }
 };
 
@@ -75,29 +102,51 @@ exports.getMyIssues = async (req, res) => {
 exports.createIssue = async (req, res) => {
   try {
     const { title, description, category, location, userId } = req.body;
+
     const rawUserId = req.userId ?? userId;
 
     if (rawUserId == null) {
-      return res.status(401).json({ error: 'Authentication required', code: 'NO_AUTH' });
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'NO_AUTH'
+      });
     }
 
     const parsedUserId = parseInt(rawUserId, 10);
+
     if (Number.isNaN(parsedUserId) || parsedUserId <= 0) {
-      return res.status(400).json({ error: 'Valid userId required', code: 'INVALID_USER' });
+      return res.status(400).json({
+        error: 'Valid userId required',
+        code: 'INVALID_USER'
+      });
     }
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return res.status(400).json({ error: 'Title is required', code: 'INVALID_TITLE' });
+      return res.status(400).json({
+        error: 'Title is required',
+        code: 'INVALID_TITLE'
+      });
     }
+
     if (title.length > MAX_TITLE_LENGTH) {
-      return res.status(400).json({ error: 'Title must be 100 characters or less', code: 'TITLE_TOO_LONG' });
+      return res.status(400).json({
+        error: 'Title must be 100 characters or less',
+        code: 'TITLE_TOO_LONG'
+      });
     }
 
     if (!description || typeof description !== 'string' || description.trim().length === 0) {
-      return res.status(400).json({ error: 'Description is required', code: 'INVALID_DESCRIPTION' });
+      return res.status(400).json({
+        error: 'Description is required',
+        code: 'INVALID_DESCRIPTION'
+      });
     }
+
     if (description.length > MAX_DESCRIPTION_LENGTH) {
-      return res.status(400).json({ error: 'Description must be 1000 characters or less', code: 'DESCRIPTION_TOO_LONG' });
+      return res.status(400).json({
+        error: 'Description must be 1000 characters or less',
+        code: 'DESCRIPTION_TOO_LONG'
+      });
     }
 
     if (!category || !ALLOWED_CATEGORIES.includes(category)) {
@@ -108,23 +157,42 @@ exports.createIssue = async (req, res) => {
     }
 
     if (!location || typeof location !== 'string' || location.trim().length === 0) {
-      return res.status(400).json({ error: 'Location is required', code: 'INVALID_LOCATION' });
-    }
-    if (location.length > MAX_LOCATION_LENGTH) {
-      return res.status(400).json({ error: 'Location must be 200 characters or less', code: 'LOCATION_TOO_LONG' });
+      return res.status(400).json({
+        error: 'Location is required',
+        code: 'INVALID_LOCATION'
+      });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: parsedUserId } });
+    if (location.length > MAX_LOCATION_LENGTH) {
+      return res.status(400).json({
+        error: 'Location must be 200 characters or less',
+        code: 'LOCATION_TOO_LONG'
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: parsedUserId }
+    });
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const role = (user.role || '').toLowerCase();
+
     if (!role.includes('community')) {
-      return res.status(403).json({ error: 'Only Community Members can submit issues', code: 'INVALID_ROLE' });
+      return res.status(403).json({
+        error: 'Only Community Members can submit issues',
+        code: 'INVALID_ROLE'
+      });
     }
 
-    const imagePath = req.file ? `/uploads/issues/${req.file.filename}` : null;
+    const imagePath = req.file
+      ? `/uploads/issues/${req.file.filename}`
+      : null;
 
     const issue = await prisma.issue.create({
       data: {
@@ -143,8 +211,12 @@ exports.createIssue = async (req, res) => {
       message: 'Issue created successfully',
       data: issue
     });
+
   } catch (error) {
-    res.status(500).json({ error: error.message, code: 'INTERNAL_ERROR' });
+    res.status(500).json({
+      error: error.message,
+      code: 'INTERNAL_ERROR'
+    });
   }
 };
 
@@ -155,7 +227,9 @@ exports.getUserIssues = async (req, res) => {
     const { status } = req.query;
 
     if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
+      return res.status(400).json({
+        error: 'userId is required'
+      });
     }
 
     const where = { userId };
@@ -171,6 +245,33 @@ exports.getUserIssues = async (req, res) => {
     res.json(issues);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};
+
+// GET comments by issue
+exports.getCommentsByIssue = async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.issueId || req.params.id);
+
+    if (Number.isNaN(issueId)) {
+      return res.status(400).json({
+        error: 'Invalid issue id'
+      });
+    }
+
+    const comments = await prisma.comment.findMany({
+      where: { issueId },
+      orderBy: { id: 'asc' }
+    });
+
+    res.json(comments);
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
   }
 };
