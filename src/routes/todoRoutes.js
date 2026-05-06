@@ -7,6 +7,10 @@ const router = express.Router();
 const controller = require('../controllers/todoController');
 const { verifyAuth } = require('../middleware/auth');
 
+const workerIssueController = require('../controllers/workerIssueController');
+
+const completionPhotoUpload = require('../middleware/completionPhotoUpload');
+
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
 
 if (!fs.existsSync(uploadDir)) {
@@ -48,6 +52,9 @@ const upload = multer({
   }
 });
 
+// Worker route FIRST
+router.get('/assigned', workerIssueController.getAssignedIssues);
+
 // Issue routes
 router.get('/', controller.getAllIssues);
 
@@ -72,6 +79,16 @@ router.post(
   verifyAuth,
   upload.single('image'),
   controller.createIssue
+);
+
+// Worker actions
+router.put('/:id/in-progress', workerIssueController.markInProgress);
+router.put('/:id/status', controller.updateIssueStatus);
+router.post('/comments', controller.createComment);
+router.post(
+  '/:id/completion-photo',
+  completionPhotoUpload.single('photo'),
+  workerIssueController.uploadCompletionPhoto
 );
 
 module.exports = router;
