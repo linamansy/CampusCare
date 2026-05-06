@@ -35,8 +35,15 @@ const upload = multer({
 });
 
 router.get('/', controller.getAllIssues);
+
+router.get('/user', controller.getUserIssues);
 router.get('/user/:userId', verifyAuth, controller.getMyIssues);
 router.get('/:id', controller.getIssueById);
-router.post('/', verifyAuth, upload.single('image'), controller.createIssue);
 
+router.post(
+  '/',
+  verifyAuth,
+  upload.single('image'),
+  controller.createIssue
+);
 module.exports = router;
