@@ -18,4 +18,9 @@ app.get('/', (req, res) => {
   res.send('CampusCare API running');
 });
 
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 module.exports = app;
