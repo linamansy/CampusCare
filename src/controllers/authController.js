@@ -82,6 +82,179 @@ const authenticateUser = async (email, password) => {
   return userWithoutPassword;
 };
 
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    const cleanName = typeof name === 'string' ? name.trim() : '';
+    const cleanEmail = cleanEmailValue(email);
+    const selectedRole = role || 'Community Member';
+
+    if (!cleanName || !cleanEmail || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (!VALID_ROLES.includes(selectedRole)) {
+      return res.status(400).json({
+        error: `Role must be one of: ${VALID_ROLES.join(', ')}`
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name: cleanName,
+        email: cleanEmail,
+        password: hashedPassword,
+        role: selectedRole
+      }
+    });
+
+    res.status(201).json({
+      message: 'Registration successful',
+      user: sanitizeUser(user)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.sendOtp = async (req, res) => {
+  try {
+    const cleanEmail = cleanEmailValue(req.body?.email);
+
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+
+    const otp = generateOtp();
+    otpStore.set(cleanEmail, {
+      otp,
+      expiresAt: Date.now() + OTP_EXPIRY_MS
+    });
+
+    res.json({
+      message: 'OTP sent successfully',
+      otp
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.verifyOtp = async (req, res) => {
+  try {
+    const cleanEmail = cleanEmailValue(req.body?.email);
+    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
+
+    if (!cleanEmail || !otp) {
+      return res.status(400).json({ error: 'Email and otp are required' });
+    }
+
+    const otpEntry = otpStore.get(cleanEmail);
+
+    if (!otpEntry) {
+      return res.status(400).json({ error: 'No OTP found for this email' });
+    }
+
+    if (Date.now() > otpEntry.expiresAt) {
+      otpStore.delete(cleanEmail);
+      return res.status(400).json({ error: 'OTP expired' });
+    }
+
+    if (otpEntry.otp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+
+    otpStore.delete(cleanEmail);
+    res.json({ message: 'OTP verified successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const cleanEmail = cleanEmailValue(req.body?.email);
+
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      return res.json({ message: 'If the account exists, a reset token was generated' });
+    }
+
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    resetTokenStore.set(resetToken, {
+      userId: user.id,
+      expiresAt: Date.now() + RESET_TOKEN_EXPIRY_MS
+    });
+
+    res.json({
+      message: 'Password reset token generated',
+      resetToken
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and newPassword are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const tokenEntry = resetTokenStore.get(token);
+
+    if (!tokenEntry) {
+      return res.status(400).json({ error: 'Invalid reset token' });
+    }
+
+    if (Date.now() > tokenEntry.expiresAt) {
+      resetTokenStore.delete(token);
+      return res.status(400).json({ error: 'Reset token expired' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: tokenEntry.userId },
+      data: { password: hashedPassword }
+    });
+
+    resetTokenStore.delete(token);
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;

@@ -1,8 +1,10 @@
 const app = require('../src/app');
 const prisma = require('../src/prismaClient');
+const jwt = require('jsonwebtoken');
 
 const PORT = Number(process.env.VERIFY_PERSON3_PORT || 3200);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
 
 const request = async (url, options = {}) => {
   const response = await fetch(`${BASE_URL}${url}`, options);
@@ -29,6 +31,7 @@ const main = async () => {
   });
 
   let user;
+  let accessToken;
   const issueIds = [];
 
   try {
@@ -39,16 +42,27 @@ const main = async () => {
         name: 'Person 3 Verification User',
         email: `person3-${Date.now()}@campuscare.test`,
         password: 'not-used',
-        role: 'community member'
+        role: 'Community Member'
       }
     });
+
+    accessToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        jti: `verify-${Date.now()}`
+      },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     const createIssue = async (payload) => {
       const response = await request('/issues', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': String(user.id)
+          Authorization: `Bearer ${accessToken}`
         },
         body: JSON.stringify(payload)
       });
