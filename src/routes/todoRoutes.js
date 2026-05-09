@@ -7,6 +7,7 @@ const router = express.Router();
 const controller = require('../controllers/todoController');
 const { verifyAuth } = require('../middleware/auth');
 const workerIssueController = require('../controllers/workerIssueController');
+const completionPhotoUpload = require('../middleware/completionPhotoUpload');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
 
@@ -55,5 +56,11 @@ router.post('/', verifyAuth, upload.single('image'), controller.createIssue);
 // Worker actions
 router.put('/:id/in-progress', workerIssueController.markInProgress);
 router.put('/:id/status', controller.updateIssueStatus);
+router.post(
+  '/:id/completion-photo',
+  completionPhotoUpload.single('photo'),
+  workerIssueController.uploadCompletionPhoto
+);
 router.post('/comments', controller.createComment);
 module.exports = router;
+

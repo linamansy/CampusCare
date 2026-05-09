@@ -8,7 +8,11 @@ const { revokeToken } = require('../utils/tokenRevocationStore');
 const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
 
-const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker'];
+const VALID_ROLES = ['Community Member'];
+const UNIVERSITY_EMAIL_DOMAINS = (process.env.UNIVERSITY_EMAIL_DOMAINS || 'giu-uni.de,giu.edu.eg,campuscare.test')
+  .split(',')
+  .map((domain) => domain.trim().toLowerCase())
+  .filter(Boolean);
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const RESET_TOKEN_EXPIRY_MS = 15 * 60 * 1000;
 
@@ -25,6 +29,11 @@ const cleanEmailValue = (email) => (
 );
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const isUniversityEmail = (email) => {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return UNIVERSITY_EMAIL_DOMAINS.includes(domain);
+};
 
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
@@ -96,6 +105,13 @@ exports.register = async (req, res) => {
 
     if (!isValidEmail(cleanEmail)) {
       return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (!isUniversityEmail(cleanEmail)) {
+      return res.status(400).json({
+        error: 'Registration requires an official university email address',
+        code: 'INVALID_UNIVERSITY_EMAIL'
+      });
     }
 
     if (!VALID_ROLES.includes(selectedRole)) {
@@ -178,6 +194,11 @@ exports.verifyOtp = async (req, res) => {
     if (otpEntry.otp !== otp) {
       return res.status(400).json({ error: 'Invalid OTP' });
     }
+
+    await prisma.user.updateMany({
+      where: { email: cleanEmail },
+      data: { isVerified: true }
+    });
 
     otpStore.delete(cleanEmail);
     res.json({ message: 'OTP verified successfully' });
@@ -270,6 +291,14 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({ error: 'User account is inactive', code: 'ACCOUNT_INACTIVE' });
+    }
+
+    if (user.isVerified === false) {
+      return res.status(403).json({ error: 'Account is not verified', code: 'ACCOUNT_NOT_VERIFIED' });
+    }
+
     res.json({
       message: 'Login successful',
       user,
@@ -314,3 +343,30 @@ exports.logout = async (req, res) => {
 
 exports.authenticateUser = authenticateUser;
 exports.generateAccessToken = generateAccessToken;
+
+
+
+exports.me = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+        actsOfServicePoints: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};

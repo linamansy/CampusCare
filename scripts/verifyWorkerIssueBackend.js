@@ -77,7 +77,8 @@ const main = async () => {
         workerId
       })
     });
-    if (comment.issueId !== issue.id) {
+    const savedComment = comment.data || comment;
+    if (savedComment.issueId !== issue.id) {
       throw new Error('Comment was not attached to the verification issue');
     }
 
