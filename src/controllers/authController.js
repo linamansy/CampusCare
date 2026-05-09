@@ -1,11 +1,33 @@
 const prisma = require('../prismaClient');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { randomUUID } = require('crypto');
 const { revokeToken } = require('../utils/tokenRevocationStore');
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
+
+const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker'];
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const RESET_TOKEN_EXPIRY_MS = 15 * 60 * 1000;
+
+const otpStore = new Map();
+const resetTokenStore = new Map();
+
+const sanitizeUser = (user) => {
+  const { password: _password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+};
+
+const cleanEmailValue = (email) => (
+  typeof email === 'string' ? email.trim().toLowerCase() : ''
+);
+
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 const isHashedPassword = (password) => /^\$2[aby]\$/.test(password);
 
@@ -15,14 +37,15 @@ const buildTokenPayload = (user) => ({
   role: user.role
 });
 
-const generateAccessToken = (user) => jwt.sign(
-  {
-    ...buildTokenPayload(user),
-    jti: randomUUID()
-  },
-  JWT_SECRET,
-  { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
-);
+const generateAccessToken = (user) =>
+  jwt.sign(
+    {
+      ...buildTokenPayload(user),
+      jti: randomUUID()
+    },
+    JWT_SECRET,
+    { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
+  );
 
 const authenticateUser = async (email, password) => {
   const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
