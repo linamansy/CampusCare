@@ -343,6 +343,7 @@ exports.updateIssueStatus = async (req, res) => {
     });
 
     res.json(issue);
+
   } catch (error) {
     if (error?.code === 'P2025') {
       return res.status(404).json({ error: 'Issue not found' });
@@ -352,32 +353,46 @@ exports.updateIssueStatus = async (req, res) => {
   }
 };
 
-// Add comment. Workers may pass workerId to enforce assignment.
+// CREATE comment for issue
 exports.createComment = async (req, res) => {
   const { text, issueId, workerId } = req.body;
+
   const parsedIssueId = parsePositiveInt(issueId);
-  const parsedWorkerId = workerId == null ? null : parsePositiveInt(workerId);
+  const parsedWorkerId =
+    workerId == null ? null : parsePositiveInt(workerId);
 
   const cleanText = sanitizeText(text);
 
   if (!cleanText || issueId == null) {
-    return res.status(400).json({ error: 'Missing text or issueId' });
+    return res.status(400).json({
+      error: 'Missing text or issueId'
+    });
   }
 
   if (!parsedIssueId) {
-    return res.status(400).json({ error: 'Invalid issueId' });
+    return res.status(400).json({
+      error: 'Invalid issueId'
+    });
   }
 
   if (workerId != null && !parsedWorkerId) {
-    return res.status(400).json({ error: 'Invalid workerId' });
+    return res.status(400).json({
+      error: 'Invalid workerId'
+    });
   }
 
   try {
     if (parsedWorkerId) {
-      const { error } = await findIssueAssignedToWorker(parsedIssueId, parsedWorkerId);
+      const { error } =
+        await findIssueAssignedToWorker(
+          parsedIssueId,
+          parsedWorkerId
+        );
 
       if (error) {
-        return res.status(error.status).json({ error: error.message });
+        return res
+          .status(error.status)
+          .json({ error: error.message });
       }
     } else {
       const issue = await prisma.issue.findUnique({
@@ -385,16 +400,28 @@ exports.createComment = async (req, res) => {
       });
 
       if (!issue) {
-        return res.status(404).json({ error: 'Issue not found' });
+        return res.status(404).json({
+          error: 'Issue not found'
+        });
       }
     }
 
     const comment = await prisma.comment.create({
-      data: { text: cleanText, issueId: parsedIssueId }
+      data: {
+        text: cleanText,
+        issueId: parsedIssueId
+      }
     });
 
-    res.status(201).json(comment);
+    res.status(201).json({
+      success: true,
+      message: 'Comment created successfully',
+      data: comment
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: error.message
+    });
   }
 };

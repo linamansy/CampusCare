@@ -1,7 +1,7 @@
 const prisma = require('../prismaClient');
 const bcrypt = require('bcryptjs');
 
-const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker'];
+const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker', 'Admin'];
 
 // GET all users
 exports.getAllUsers = async (req, res) => {
