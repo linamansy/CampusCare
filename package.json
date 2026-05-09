@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node scripts/verifyWorkerIssueBackend.js"
+    "test": "node scripts/verifyPerson3IssueFlow.js"
   },
   "keywords": [],
   "author": "",
@@ -11,9 +11,11 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "multer": "^2.0.2"
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.0"
   },
   "devDependencies": {
     "prisma": "^5.22.0"
