@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const debugRoutes = require('./routes/debugRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -24,6 +25,8 @@ app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/debug', debugRoutes);
 
 // Root
@@ -37,3 +40,4 @@ app.get('/health', (req, res) => {
 });
 
 module.exports = app;
+

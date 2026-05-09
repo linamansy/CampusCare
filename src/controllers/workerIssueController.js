@@ -1,8 +1,10 @@
 const prisma = require('../prismaClient');
 const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
+const { notifyRole } = require('../services/notificationService');
 const {
   isValidStatusTransition,
-  parsePositiveInt
+  parsePositiveInt,
+  sanitizeText
 } = require('../utils/issueHelpers');
 
 exports.getAssignedIssues = async (req, res) => {
@@ -72,6 +74,7 @@ exports.markInProgress = async (req, res) => {
 exports.uploadCompletionPhoto = async (req, res) => {
   const issueId = parsePositiveInt(req.params.id);
   const workerId = parsePositiveInt(req.body.workerId);
+  const completionNote = sanitizeText(req.body.note || req.body.completionNote || '');
 
   if (!issueId) {
     return res.status(400).json({ error: 'Invalid issue id' });
@@ -92,10 +95,51 @@ exports.uploadCompletionPhoto = async (req, res) => {
       return res.status(error.status).json({ error: error.message });
     }
 
-    const photoUrl = `/uploads/completion-photos/${req.file.filename}`;
-    const issue = await prisma.issue.update({
+    const currentIssue = await prisma.issue.findUnique({
       where: { id: issueId },
-      data: { completionPhotoUrl: photoUrl }
+      select: { status: true }
+    });
+
+    if (!currentIssue) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    if (!isValidStatusTransition(currentIssue.status, 'Under Review')) {
+      return res.status(409).json({
+        error: `Invalid status transition from ${currentIssue.status} to Under Review`
+      });
+    }
+
+    const photoUrl = `/uploads/completion-photos/${req.file.filename}`;
+    const issue = await prisma.$transaction(async (tx) => {
+      if (completionNote) {
+        await tx.comment.create({
+          data: {
+            issueId,
+            text: `Completion note: ${completionNote}`
+          }
+        });
+      }
+
+      const updatedIssue = await tx.issue.update({
+        where: { id: issueId },
+        data: {
+          completionPhotoUrl: photoUrl,
+          completionNote: completionNote || null,
+          status: 'Under Review'
+        },
+        include: { comments: true, user: true }
+      });
+
+      await notifyRole({
+        role: 'Facility Manager',
+        type: 'WORKER_COMPLETION_SUBMITTED',
+        title: 'Ticket ready for review',
+        message: `Ticket #${issueId} has a worker completion update.`,
+        issueId
+      }, tx);
+
+      return updatedIssue;
     });
 
     res.json(issue);

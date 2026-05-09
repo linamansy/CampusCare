@@ -9,14 +9,16 @@ datasource db {
 }
 
 model User {
-  id         Int     @id @default(autoincrement())
-  name       String
-  email      String  @unique
-  password   String
-  role       String  // Community Member, Worker, Facility Manager, Admin
-  isActive   Boolean @default(true)
-  isVerified Boolean @default(false)
-  issues     Issue[]
+  id                  Int            @id @default(autoincrement())
+  name                String
+  email               String         @unique
+  password            String
+  role                String         // Community Member, Worker, Facility Manager, Admin
+  isActive            Boolean        @default(true)
+  isVerified          Boolean        @default(false)
+  actsOfServicePoints Int            @default(0)
+  issues              Issue[]
+  notifications       Notification[]
 }
 
 model Issue {
@@ -27,9 +29,15 @@ model Issue {
   priority           String    @default("Normal")
   category           String
   location           String    @db.VarChar(200)
+  building           String    @default("") @db.VarChar(100)
+  floor              String    @default("") @db.VarChar(50)
+  room               String    @default("") @db.VarChar(50)
 
   image              String?
   completionPhotoUrl String?
+  completionNote     String?
+  rejectionReason    String?
+  resolvedAt         DateTime?
 
   userId             Int
   assignedTo         Int?
@@ -42,8 +50,22 @@ model Issue {
 }
 
 model Comment {
-  id      Int    @id @default(autoincrement())
-  text    String
-  issueId Int
-  issue   Issue  @relation(fields: [issueId], references: [id])
+  id        Int      @id @default(autoincrement())
+  text      String
+  issueId   Int
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  message   String
+  issueId   Int?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
 }

@@ -11,7 +11,10 @@ exports.getAllUsers = async (req, res) => {
         id: true,
         name: true,
         email: true,
-        role: true
+        role: true,
+        isActive: true,
+        isVerified: true,
+        actsOfServicePoints: 0
       }
     });
 
@@ -63,7 +66,10 @@ exports.createUser = async (req, res) => {
         name: cleanName,
         email: cleanEmail,
         password: hashedPassword,
-        role: cleanRole
+        role: cleanRole,
+        isActive: true,
+        isVerified: true,
+        actsOfServicePoints: 0
       }
     });
 
@@ -74,3 +80,6 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
