@@ -1,46 +1,68 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet
+} from 'react-native';
+
 import { COLORS } from '../theme/colors';
 
-const StatusBadge = ({ status, style = {} }) => {
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Open':
+const StatusBadge = ({
+  status,
+  style = {}
+}) => {
+
+  const statusLabel = status
+    ? status.replace('_', ' ').toUpperCase()
+    : 'PENDING';
+
+  const getBadgeColor = () => {
+    switch (statusLabel) {
+      case 'OPEN':
+      case 'PENDING':
         return COLORS.warning;
-      case 'In_Progress':
+
+      case 'IN PROGRESS':
         return COLORS.primary;
-      case 'Resolved':
+
+      case 'RESOLVED':
+      case 'VERIFIED':
+      case 'CLOSED':
         return COLORS.success;
-      case 'Verified':
-        return COLORS.secondary;
+
       default:
-        return COLORS.subText;
+        return COLORS.danger;
     }
   };
 
-  const getStatusText = (status) => {
-    return status.replace('_', ' ');
-  };
-
   return (
-    <View style={[styles.badge, { backgroundColor: getStatusColor(status) }, style]}>
-      <Text style={styles.badgeText}>{getStatusText(status)}</Text>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: getBadgeColor() },
+        style
+      ]}
+    >
+      <Text style={styles.badgeText}>
+        {statusLabel}
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
     alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
   },
+
   badgeText: {
-    color: COLORS.card,
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: '700',
   },
 });
 

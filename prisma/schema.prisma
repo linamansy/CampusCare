@@ -8,56 +8,80 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  name     String
-  email    String  @unique
-  password String
-  role     String
-  issues   Issue[]
-  comments Comment[]
-  notifications Notification[]
-  verifiedIssues Issue[] @relation("IssueVerifier")
+  id              Int            @id @default(autoincrement())
+  name            String
+  email           String         @unique
+  password        String
+  role            String
+  isActive        Boolean        @default(true)
+  isVerified      Boolean        @default(false)
+
+  issues          Issue[]
+  comments        Comment[]
+  notifications   Notification[]
+
+  verifiedIssues  Issue[]        @relation("IssueVerifier")
 }
 
 model Issue {
-  id          Int       @id @default(autoincrement())
-  title       String
-  description String
-  status      String    @default("Open")
-  category    String
-  location    String
-  image       String?
-  userId      Int
-  assignedTo  Int?
-  resolvedAt  DateTime?
-  verifiedBy  Int?
-  comments    Comment[]
-  notifications Notification[]
-  user        User      @relation(fields: [userId], references: [id])
-  verifier    User?     @relation("IssueVerifier", fields: [verifiedBy], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                  Int            @id @default(autoincrement())
+
+  title               String
+  description         String
+
+  status              String         @default("Open")
+  priority            String         @default("Normal")
+
+  category            String
+  location            String
+
+  image               String?
+  completionPhotoUrl  String?
+
+  userId              Int
+  assignedTo          Int?
+
+  resolvedAt          DateTime?
+  verifiedBy          Int?
+
+  comments            Comment[]
+  notifications       Notification[]
+
+  user                User           @relation(fields: [userId], references: [id])
+
+  verifier            User?          @relation("IssueVerifier", fields: [verifiedBy], references: [id])
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  text      String
-  issueId   Int
-  userId    Int
-  issue     Issue    @relation(fields: [issueId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  text        String
+
+  issueId     Int
+  userId      Int
+
+  issue        Issue    @relation(fields: [issueId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  type      String   // 'issue_assigned', 'comment_added', 'issue_resolved', 'issue_verified'
-  message   String
-  issueId   Int?
-  read      Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id])
-  issue     Issue?   @relation(fields: [issueId], references: [id])
-  createdAt DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+
+  userId      Int
+  type        String
+  message     String
+
+  issueId     Int?
+
+  read        Boolean   @default(false)
+
+  user        User      @relation(fields: [userId], references: [id])
+  issue       Issue?    @relation(fields: [issueId], references: [id])
+
+  createdAt   DateTime  @default(now())
 }

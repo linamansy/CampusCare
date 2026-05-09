@@ -1,53 +1,65 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet
+} from 'react-native';
+
+import CustomButton from './CustomButton';
 import { COLORS } from '../theme/colors';
 
 const ErrorMessage = ({
   message,
   onRetry,
   style = {}
-}) => {
-  return (
-    <View style={[styles.container, style]}>
-      <Text style={styles.icon}>⚠️</Text>
-      <Text style={styles.message}>{message}</Text>
-      {onRetry && (
-        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-};
+}) => (
+  <View style={[styles.container, style]}>
+    <Text style={styles.icon}>⚠️</Text>
+
+    <Text style={styles.title}>
+      Something went wrong
+    </Text>
+
+    <Text style={styles.message}>
+      {message}
+    </Text>
+
+    {onRetry && (
+      <CustomButton
+        title="Try Again"
+        onPress={onRetry}
+      />
+    )}
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: 24,
+    backgroundColor: COLORS.background,
   },
+
   icon: {
     fontSize: 48,
     marginBottom: 16,
   },
+
+  title: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+
   message: {
+    color: COLORS.subText,
     fontSize: 16,
-    color: COLORS.danger,
+    marginBottom: 20,
     textAlign: 'center',
-    marginBottom: 16,
     lineHeight: 24,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: COLORS.card,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

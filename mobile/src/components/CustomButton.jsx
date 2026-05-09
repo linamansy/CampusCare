@@ -1,5 +1,11 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator
+} from 'react-native';
+
 import { COLORS } from '../theme/colors';
 
 const CustomButton = ({
@@ -12,18 +18,24 @@ const CustomButton = ({
 }) => {
   return (
     <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      disabled={disabled || loading}
       style={[
         styles.button,
         disabled && styles.disabled,
         style
       ]}
-      onPress={onPress}
-      disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color={COLORS.card} size="small" />
+        <ActivityIndicator
+          color="#FFFFFF"
+          size="small"
+        />
       ) : (
-        <Text style={[styles.buttonText, textStyle]}>{title}</Text>
+        <Text style={[styles.buttonText, textStyle]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -32,19 +44,22 @@ const CustomButton = ({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
+    borderRadius: 14,
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 16,
   },
+
   disabled: {
     backgroundColor: COLORS.subText,
   },
+
   buttonText: {
-    color: COLORS.card,
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { requireAdmin } = require('../middleware/rbac');
 
 const controller = require('../controllers/userController');
 
-router.get('/', controller.getAllUsers);
-router.post('/', controller.createUser);
+// All user endpoints require admin role
+router.get('/', requireAdmin(), controller.getAllUsers);
+router.post('/', requireAdmin(), controller.createUser);
 
 module.exports = router;

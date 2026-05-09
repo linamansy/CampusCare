@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "CampusCare",
+    "slug": "CampusCare",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": ["**/*"]
+  }
+}
