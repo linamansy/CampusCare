@@ -18,6 +18,8 @@ CREATE TABLE "Issue" (
     "category" TEXT NOT NULL,
     "location" TEXT NOT NULL,
     "userId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Issue_pkey" PRIMARY KEY ("id")
 );

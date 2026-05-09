@@ -18,16 +18,24 @@ model User {
 }
 
 model Issue {
-  id          Int     @id @default(autoincrement())
-  title       String
-  description String
-  status      String  @default("Pending")
-  category    String
-  location    String
-  updatedAt   DateTime @updatedAt
-  userId      Int
-  user        User    @relation(fields: [userId], references: [id])
-  comments    Comment[]
+  id                 Int       @id @default(autoincrement())
+  title              String    @db.VarChar(100)
+  description        String    @db.Text
+  status             String    @default("Open")
+  category           String
+  location           String    @db.VarChar(200)
+
+  image              String?
+  completionPhotoUrl String?
+
+  userId             Int
+  assignedTo         Int?
+
+  comments           Comment[]
+  user               User      @relation(fields: [userId], references: [id])
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Comment {
