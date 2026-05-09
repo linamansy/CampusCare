@@ -32,6 +32,7 @@ exports.getAllIssues = async (req, res) => {
       include: { user: true, comments: true },
       orderBy: { createdAt: 'desc' }
     });
+
     res.json({ success: true, count: issues.length, data: issues });
   } catch (error) {
     res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
@@ -43,8 +44,12 @@ exports.getIssueById = async (req, res) => {
   try {
     const { id } = req.params;
     const parsedId = parseInt(id, 10);
+
     if (Number.isNaN(parsedId)) {
-      return res.status(400).json({ error: 'Valid issue ID required', code: 'INVALID_ID' });
+      return res.status(400).json({
+        error: 'Valid issue ID required',
+        code: 'INVALID_ID'
+      });
     }
 
     const issue = await prisma.issue.findUnique({
@@ -53,12 +58,18 @@ exports.getIssueById = async (req, res) => {
     });
 
     if (!issue) {
-      return res.status(404).json({ error: 'Issue not found', code: 'NOT_FOUND' });
+      return res.status(404).json({
+        error: 'Issue not found',
+        code: 'NOT_FOUND'
+      });
     }
 
     res.json({ success: true, data: issue });
   } catch (error) {
-    res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
   }
 };
 
@@ -67,8 +78,12 @@ exports.getMyIssues = async (req, res) => {
   try {
     const { userId } = req.params;
     const parsedUserId = parseInt(userId, 10);
+
     if (Number.isNaN(parsedUserId)) {
-      return res.status(400).json({ error: 'Valid userId required', code: 'INVALID_USER_ID' });
+      return res.status(400).json({
+        error: 'Valid userId required',
+        code: 'INVALID_USER_ID'
+      });
     }
 
     const issues = await prisma.issue.findMany({
@@ -77,9 +92,16 @@ exports.getMyIssues = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ success: true, count: issues.length, data: issues });
+    res.json({
+      success: true,
+      count: issues.length,
+      data: issues
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
   }
 };
 
@@ -90,12 +112,19 @@ exports.createIssue = async (req, res) => {
     const rawUserId = req.userId ?? userId;
 
     if (rawUserId == null) {
-      return res.status(401).json({ error: 'Authentication required', code: 'NO_AUTH' });
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'NO_AUTH'
+      });
     }
 
     const parsedUserId = parseInt(rawUserId, 10);
+
     if (Number.isNaN(parsedUserId) || parsedUserId <= 0) {
-      return res.status(400).json({ error: 'Valid userId required', code: 'INVALID_USER' });
+      return res.status(400).json({
+        error: 'Valid userId required',
+        code: 'INVALID_USER'
+      });
     }
 
     const cleanTitle = sanitizeText(title);
@@ -153,176 +182,188 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: parsedUserId } });
+    const user = await prisma.user.findUnique({
+      where: { id: parsedUserId }
+    });
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     const role = (user.role || '').toLowerCase();
+
     if (!role.includes('community')) {
-      return res.status(403).json({ error: 'Only Community Members can submit issues', code: 'INVALID_ROLE' });
+      return res.status(403).json({
+        error: 'Only Community Members can submit issues',
+        code: 'INVALID_ROLE'
+      });
     }
 
-    const imagePath = req.file ? `/uploads/issues/${req.file.filename}` : null;
+    const imagePath = req.file
+      ? `/uploads/issues/${req.file.filename}`
+      : null;
 
     const similarIssueCount = await prisma.issue.count({
       where: {
-        };
+        location: {
+          equals: cleanLocation,
+          mode: 'insensitive'
+        },
+        status: { notIn: CLOSED_STATUSES }
+      }
+    });
 
-        // GET issues for specific user
-        exports.getUserIssues = async (req, res) => {
-          try {
-            const userId = parseInt(req.query.userId);
-            const { status } = req.query;
+    const priority = similarIssueCount >= PRIORITY_HIGH_THRESHOLD
+      ? 'High'
+      : 'Normal';
 
-            if (!userId) {
-              return res.status(400).json({
-                error: 'userId is required'
-              });
-            }
+    const issue = await prisma.issue.create({
+      data: {
+        title: cleanTitle,
+        description: cleanDescription,
+        category,
+        location: cleanLocation,
+        image: imagePath,
+        status: 'Submitted/Pending',
+        priority,
+        userId: parsedUserId
+      }
+    });
 
-            const where = { userId };
+    res.status(201).json({
+      success: true,
+      message: 'Issue created successfully',
+      data: issue
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
 
-            if (status) {
-              where.status = status;
-            }
+// GET issues for specific user
+exports.getUserIssues = async (req, res) => {
+  try {
+    const userId = parseInt(req.query.userId);
+    const { status } = req.query;
 
-            const issues = await prisma.issue.findMany({
-              where
-            });
+    if (!userId) {
+      return res.status(400).json({
+        error: 'userId is required'
+      });
+    }
 
-            res.json(issues);
+    const where = { userId };
 
-          } catch (error) {
-            res.status(500).json({
-              error: error.message
-            });
-          }
-        };
+    if (status) {
+      where.status = status;
+    }
 
-        // GET comments by issue
-        exports.getCommentsByIssue = async (req, res) => {
-          try {
-            const issueId = parseInt(req.params.issueId || req.params.id);
+    const issues = await prisma.issue.findMany({
+      where
+    });
 
-            if (Number.isNaN(issueId)) {
-              return res.status(400).json({
-                error: 'Invalid issue id'
-              });
-            }
+    res.json(issues);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};
 
-            const comments = await prisma.comment.findMany({
-              where: { issueId },
-              orderBy: { id: 'asc' }
-            });
+// GET comments by issue
+exports.getCommentsByIssue = async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.issueId || req.params.id);
 
-            res.json(comments);
+    if (Number.isNaN(issueId)) {
+      return res.status(400).json({
+        error: 'Invalid issue id'
+      });
+    }
 
-          } catch (error) {
-            res.status(500).json({
-              error: error.message
-            });
-          }
-        };
+    const comments = await prisma.comment.findMany({
+      where: { issueId },
+      orderBy: { id: 'asc' }
+    });
 
-        // Generic status update used by manager actions
-        exports.updateIssueStatus = async (req, res) => {
-          const id = parsePositiveInt(req.params.id);
-          const { status } = req.body;
+    res.json(comments);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};
 
-          if (!id) {
-            return res.status(400).json({ error: 'Invalid issue id' });
-          }
+// Generic status update used by manager actions
+exports.updateIssueStatus = async (req, res) => {
+  const id = parsePositiveInt(req.params.id);
+  const { status } = req.body;
 
-          const nextStatus = normalizeStatus(status);
+  if (!id) {
+    return res.status(400).json({ error: 'Invalid issue id' });
+  }
 
-          if (!nextStatus) {
-            return res.status(400).json({ error: 'Missing status' });
-          }
+  const nextStatus = normalizeStatus(status);
 
-          if (!isAllowedStatus(nextStatus)) {
-            return res.status(400).json({
-              error: `Status must be one of: ${ALLOWED_STATUSES.join(', ')}`
-            });
-          }
+  if (!nextStatus) {
+    return res.status(400).json({ error: 'Missing status' });
+  }
 
-          try {
-            const currentIssue = await prisma.issue.findUnique({
-              where: { id },
-              select: { status: true }
-            });
+  if (!isAllowedStatus(nextStatus)) {
+    return res.status(400).json({
+      error: `Status must be one of: ${ALLOWED_STATUSES.join(', ')}`
+    });
+  }
 
-            if (!currentIssue) {
-              return res.status(404).json({ error: 'Issue not found' });
-            }
+  try {
+    const currentIssue = await prisma.issue.findUnique({
+      where: { id },
+      select: { status: true }
+    });
 
-            if (!isValidStatusTransition(currentIssue.status, nextStatus)) {
-              return res.status(409).json({
-                error: `Invalid status transition from ${currentIssue.status} to ${nextStatus}`
-              });
-            }
+    if (!currentIssue) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
 
-            const issue = await prisma.issue.update({
-              where: { id },
-              data: { status: nextStatus }
-            });
+    if (!isValidStatusTransition(currentIssue.status, nextStatus)) {
+      return res.status(409).json({
+        error: `Invalid status transition from ${currentIssue.status} to ${nextStatus}`
+      });
+    }
 
-            res.json(issue);
-          } catch (error) {
-            if (error?.code === 'P2025') {
-              return res.status(404).json({ error: 'Issue not found' });
-            }
+    const issue = await prisma.issue.update({
+      where: { id },
+      data: { status: nextStatus }
+    });
 
-            res.status(500).json({ error: error.message });
-          }
-        };
+    res.json(issue);
+  } catch (error) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
 
-        // Add comment. Workers may pass workerId to enforce assignment.
-        exports.createComment = async (req, res) => {
-          const { text, issueId, workerId } = req.body;
-          const parsedIssueId = parsePositiveInt(issueId);
-          const parsedWorkerId = workerId == null ? null : parsePositiveInt(workerId);
+    res.status(500).json({ error: error.message });
+  }
+};
 
-          const cleanText = sanitizeText(text);
+// Add comment. Workers may pass workerId to enforce assignment.
+exports.createComment = async (req, res) => {
+  const { text, issueId, workerId } = req.body;
+  const parsedIssueId = parsePositiveInt(issueId);
+  const parsedWorkerId = workerId == null ? null : parsePositiveInt(workerId);
 
-          if (!cleanText || issueId == null) {
-            return res.status(400).json({ error: 'Missing text or issueId' });
-          }
+  const cleanText = sanitizeText(text);
 
-          if (!parsedIssueId) {
-            return res.status(400).json({ error: 'Invalid issueId' });
-          }
+  if (!cleanText || issueId == null) {
+    return res.status(400).json({ error: 'Missing text or issueId' });
+  }
 
-          if (workerId != null && !parsedWorkerId) {
-            return res.status(400).json({ error: 'Invalid workerId' });
-          }
-
-          try {
-            if (parsedWorkerId) {
-              const { error } = await findIssueAssignedToWorker(parsedIssueId, parsedWorkerId);
-
-              if (error) {
-                return res.status(error.status).json({ error: error.message });
-              }
-            } else {
-              const issue = await prisma.issue.findUnique({
-                where: { id: parsedIssueId }
-              });
-
-              if (!issue) {
-                return res.status(404).json({ error: 'Issue not found' });
-              }
-            }
-
-            const comment = await prisma.comment.create({
-              data: { text: cleanText, issueId: parsedIssueId }
-            });
-
-            res.status(201).json(comment);
-          } catch (error) {
-            res.status(500).json({ error: error.message });
-          }
-        };
   if (!parsedIssueId) {
     return res.status(400).json({ error: 'Invalid issueId' });
   }

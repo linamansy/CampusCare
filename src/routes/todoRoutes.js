@@ -6,8 +6,10 @@ const multer = require('multer');
 const router = express.Router();
 const controller = require('../controllers/todoController');
 const { verifyAuth } = require('../middleware/auth');
+const workerIssueController = require('../controllers/workerIssueController');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
+
 if (!fs.existsSync(uploadDir)) {
 	fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -34,16 +36,24 @@ const upload = multer({
 	}
 });
 
-router.get('/', controller.getAllIssues);
+// Worker route first
+router.get('/assigned', workerIssueController.getAssignedIssues);
 
+// Issue routes
+router.get('/', controller.getAllIssues);
 router.get('/user', controller.getUserIssues);
 router.get('/user/:userId', verifyAuth, controller.getMyIssues);
 router.get('/:id', controller.getIssueById);
 
-router.post(
-  '/',
-  verifyAuth,
-  upload.single('image'),
-  controller.createIssue
-);
+// Comments routes
+router.get('/:id/comments', controller.getCommentsByIssue);
+router.post('/:id/comments', controller.createComment);
+
+// Create issue
+router.post('/', verifyAuth, upload.single('image'), controller.createIssue);
+
+// Worker actions
+router.put('/:id/in-progress', workerIssueController.markInProgress);
+router.put('/:id/status', controller.updateIssueStatus);
+router.post('/comments', controller.createComment);
 module.exports = router;
