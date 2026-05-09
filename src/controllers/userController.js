@@ -1,4 +1,5 @@
 const prisma = require('../prismaClient');
+const bcrypt = require('bcryptjs');
 
 const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker'];
 
@@ -23,7 +24,7 @@ exports.getAllUsers = async (req, res) => {
 // CREATE user
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role } = req.body || {};
     const cleanName = typeof name === 'string' ? name.trim() : '';
     const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const cleanRole = typeof role === 'string' ? role.trim() : '';
@@ -55,11 +56,13 @@ exports.createUser = async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await prisma.user.create({
       data: {
         name: cleanName,
         email: cleanEmail,
-        password,
+        password: hashedPassword,
         role: cleanRole
       }
     });
