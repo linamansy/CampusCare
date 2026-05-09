@@ -50,21 +50,13 @@ const upload = multer({
 
 // Issue routes
 router.get('/', controller.getAllIssues);
+router.get('/my', verifyAuth, controller.getMyIssues);
 
-router.get('/user', controller.getUserIssues);
-
-router.get(
-  '/user/:userId',
-  verifyAuth,
-  controller.getMyIssues
-);
+// Notifications routes must be registered before /:id
+router.get('/notifications', verifyAuth, controller.getUserNotifications);
+router.put('/notifications/:id/read', verifyAuth, controller.markNotificationRead);
 
 router.get('/:id', controller.getIssueById);
-
-// Comments routes
-router.get('/:id/comments', controller.getCommentsByIssue);
-
-router.post('/:id/comments', controller.createComment);
 
 // Create issue
 router.post(
@@ -73,5 +65,23 @@ router.post(
   upload.single('image'),
   controller.createIssue
 );
+
+// Update issue
+router.put('/:id/status', verifyAuth, controller.updateIssueStatus);
+router.put('/:id/assign', verifyAuth, controller.assignWorker);
+router.put('/:id/close', verifyAuth, controller.closeIssue);
+
+// Upload photo
+router.post('/:id/photo', verifyAuth, upload.single('image'), controller.uploadIssuePhoto);
+
+// Delete issue
+router.delete('/:id', verifyAuth, controller.deleteIssue);
+
+// Comments routes
+router.get('/:id/comments', controller.getCommentsByIssue);
+router.post('/:id/comments', verifyAuth, controller.createComment);
+
+// Resolution verification
+router.post('/:id/verify', verifyAuth, controller.verifyResolution);
 
 module.exports = router;

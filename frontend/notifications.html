@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusCare - Notifications</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .notification { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .notification.unread { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .notification.read { background: #f9f9f9; }
+        .mark-read-btn { background: #007bff; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .mark-read-btn:hover { background: #0056b3; }
+        .timestamp { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>My Notifications</h1>
+
+    <div id="notifications-container">
+        <p>Loading notifications...</p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let currentUserId = 1; // Replace with real auth
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch(`${API_BASE}/issues/notifications`, {
+                    headers: {
+                        'x-user-id': currentUserId.toString()
+                    }
+                });
+
+                const data = await response.json();
+                const container = document.getElementById('notifications-container');
+
+                if (data.success && data.data.length > 0) {
+                    container.innerHTML = '';
+                    data.data.forEach(notification => {
+                        const notifDiv = document.createElement('div');
+                        notifDiv.className = `notification ${notification.read ? 'read' : 'unread'}`;
+                        notifDiv.innerHTML = `
+                            <h4>${notification.type.replace('_', ' ').toUpperCase()}</h4>
+                            <p>${notification.message}</p>
+                            <div class="timestamp">${new Date(notification.createdAt).toLocaleString()}</div>
+                            ${!notification.read ?
+                                `<button class="mark-read-btn" onclick="markRead(${notification.id})">Mark as Read</button>` :
+                                '<span>✓ Read</span>'}
+                        `;
+                        container.appendChild(notifDiv);
+                    });
+                } else {
+                    container.innerHTML = '<p>No notifications found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+                document.getElementById('notifications-container').innerHTML =
+                    '<p>Error loading notifications. Please try again.</p>';
+            }
+        }
+
+        async function markRead(notificationId) {
+            try {
+                const response = await fetch(`${API_BASE}/issues/notifications/${notificationId}/read`, {
+                    method: 'PUT',
+                    headers: {
+                        'x-user-id': currentUserId.toString()
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadNotifications(); // Refresh the list
+                } else {
+                    alert('Error marking notification as read');
+                }
+            } catch (error) {
+                console.error('Error marking notification read:', error);
+            }
+        }
+
+        // Load notifications on page load
+        window.addEventListener('load', loadNotifications);
+    </script>
+</body>
+</html>
