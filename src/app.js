@@ -19,6 +19,7 @@ app.use('/issues', issueRoutes);
 app.use('/manager', managerRoutes);
 app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/debug', debugRoutes);
 
 // Root
