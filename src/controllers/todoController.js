@@ -275,3 +275,54 @@ exports.getCommentsByIssue = async (req, res) => {
     });
   }
 };
+
+// CREATE comment for issue
+exports.createComment = async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.id, 10);
+    const { text } = req.body;
+
+    if (Number.isNaN(issueId)) {
+      return res.status(400).json({
+        error: 'Invalid issue id',
+        code: 'INVALID_ID'
+      });
+    }
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Comment text is required',
+        code: 'INVALID_COMMENT'
+      });
+    }
+
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId }
+    });
+
+    if (!issue) {
+      return res.status(404).json({
+        error: 'Issue not found',
+        code: 'ISSUE_NOT_FOUND'
+      });
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        text: text.trim(),
+        issueId
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Comment created successfully',
+      data: comment
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
