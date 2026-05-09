@@ -1,29 +1,38 @@
+const jwt = require('jsonwebtoken');
+const { isTokenRevoked } = require('../utils/tokenRevocationStore');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
+
 const verifyAuth = (req, res, next) => {
   try {
-    const bodyUserId = req.body && req.body.userId ? req.body.userId : null;
-    const headerValue = req.headers['x-user-id'] ?? req.headers['x-userid'];
-    const headerUserId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-    const queryUserId = req.query && req.query.userId ? req.query.userId : null;
-    const userId = bodyUserId || headerUserId || queryUserId;
-    if (!userId) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || typeof authHeader !== 'string') {
       return res.status(401).json({ error: 'Authentication required', code: 'NO_AUTH' });
     }
 
-    const parsedUserId = parseInt(String(userId).trim(), 10);
-    if (Number.isNaN(parsedUserId) || parsedUserId <= 0) {
-      console.warn('Auth failed:', {
-        bodyUserId,
-        headerUserId,
-        queryUserId,
-        rawUserId: userId
-      });
+    const [scheme, token] = authHeader.split(' ');
+
+    if (scheme !== 'Bearer' || !token) {
       return res.status(401).json({ error: 'Invalid authentication', code: 'INVALID_AUTH' });
     }
 
-    req.userId = parsedUserId;
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (isTokenRevoked(decoded.jti)) {
+      return res.status(401).json({ error: 'Authentication token revoked', code: 'TOKEN_REVOKED' });
+    }
+
+    req.user = decoded;
+    req.userId = decoded.id;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid authentication', code: 'INVALID_AUTH' });
+    const code = error.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_AUTH';
+    const message = error.name === 'TokenExpiredError'
+      ? 'Authentication token expired'
+      : 'Invalid authentication';
+
+    res.status(401).json({ error: message, code });
   }
 };
 
