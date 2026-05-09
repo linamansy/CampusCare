@@ -54,10 +54,7 @@ exports.getIssueById = async (req, res) => {
 
     const issue = await prisma.issue.findUnique({
       where: { id: parsedId },
-      include: {
-        user: true,
-        comments: true
-      }
+      include: { user: true, comments: true }
     });
 
     if (!issue) {
@@ -68,7 +65,6 @@ exports.getIssueById = async (req, res) => {
     }
 
     res.json({ success: true, data: issue });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -101,7 +97,6 @@ exports.getMyIssues = async (req, res) => {
       count: issues.length,
       data: issues
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -114,7 +109,6 @@ exports.getMyIssues = async (req, res) => {
 exports.createIssue = async (req, res) => {
   try {
     const { title, description, category, location, userId } = req.body;
-
     const rawUserId = req.userId ?? userId;
 
     if (rawUserId == null) {
@@ -244,7 +238,6 @@ exports.createIssue = async (req, res) => {
       message: 'Issue created successfully',
       data: issue
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -276,7 +269,6 @@ exports.getUserIssues = async (req, res) => {
     });
 
     res.json(issues);
-
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -301,7 +293,6 @@ exports.getCommentsByIssue = async (req, res) => {
     });
 
     res.json(comments);
-
   } catch (error) {
     res.status(500).json({
       error: error.message

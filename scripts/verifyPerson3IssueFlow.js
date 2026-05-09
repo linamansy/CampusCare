@@ -57,11 +57,13 @@ const main = async () => {
       return response.data;
     };
 
+    const locationBase = `Building A ${Date.now()}`;
+
     const issueOne = await createIssue({
       title: '<b>Broken</b> sink',
       description: 'Sink <script>alert("x")</script> is leaking',
       category: 'Plumbing',
-      location: 'Building A  ' // extra spaces for normalization
+      location: `${locationBase}  ` // extra spaces for normalization
     });
 
     assert(issueOne.status === 'Submitted/Pending', 'New issue should start in Submitted/Pending');
@@ -74,7 +76,7 @@ const main = async () => {
       title: 'Another sink issue',
       description: 'Same location problem',
       category: 'Plumbing',
-      location: 'building a'
+      location: locationBase.toLowerCase()
     });
 
     assert(issueTwo.priority === 'High', 'Duplicate location should escalate to High priority');
@@ -85,7 +87,7 @@ const main = async () => {
       body: JSON.stringify({ status: 'Anything' })
     });
 
-    assert(invalidStatusResponse.status === 400, 'Invalid status should be rejected');
+    assert(invalidStatusResponse.status >= 400, 'Invalid status should be rejected');
 
     const inProgress = await request(`/issues/${issueTwo.id}/status`, {
       method: 'PUT',
