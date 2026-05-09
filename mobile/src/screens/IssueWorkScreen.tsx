@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -11,28 +11,51 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { addComment, markIssueInProgress, uploadCompletionPhoto, type Issue } from '@/src/services/api';
+import { addComment, markIssueCompleted, markIssueInProgress, uploadCompletionPhoto, type Issue } from '@/src/services/api';
 import { Colors } from '@/src/theme/colors';
 import { ErrorMessage } from '@/src/components/ErrorMessage';
 import { LoadingOverlay } from '@/src/components/LoadingOverlay';
-import type { WorkerStackParamList } from '@/src/navigation/types';
 
-type Props = NativeStackScreenProps<WorkerStackParamList, 'IssueWork'>;
+export default function IssueWorkScreen() {
+  const params = useLocalSearchParams<{ issue?: string }>();
+  const issueParam = params.issue;
+  const parsedIssue = useMemo<Issue | null>(() => {
+    if (!issueParam) {
+      return null;
+    }
 
-export default function IssueWorkScreen({ route }: Props) {
-  const { issue } = route.params;
-  const [currentIssue, setCurrentIssue] = useState<Issue>(issue);
+    try {
+      return JSON.parse(decodeURIComponent(issueParam));
+    } catch {
+      return null;
+    }
+  }, [issueParam]);
+
+  const [currentIssue, setCurrentIssue] = useState<Issue | null>(parsedIssue);
   const [comment, setComment] = useState('');
-  const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  if (!currentIssue) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centered}>
+          <Text style={styles.title}>Issue not found</Text>
+          <Text style={styles.subtitle}>Open this screen from the Assigned Issues list.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const issue = currentIssue;
+
   async function handleAddComment() {
     if (!comment.trim()) {
-      setError('Enter a message before submitting a comment.');
+      setError('Please enter a comment before submitting.');
       return;
     }
 
@@ -41,11 +64,11 @@ export default function IssueWorkScreen({ route }: Props) {
     setSuccessMessage(null);
 
     try {
-      await addComment(currentIssue.id, comment.trim());
+      await addComment(issue.id, comment.trim());
       setSuccessMessage('Comment added successfully.');
       setComment('');
     } catch (err) {
-      setError('Unable to save comment. Please try again.');
+      setError('Unable to submit comment. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -57,9 +80,25 @@ export default function IssueWorkScreen({ route }: Props) {
     setSuccessMessage(null);
 
     try {
-      await markIssueInProgress(currentIssue.id);
-      setCurrentIssue({ ...currentIssue, status: 'In Progress' });
+      await markIssueInProgress(issue.id);
+      setCurrentIssue({ ...issue, status: 'In Progress' });
       setSuccessMessage('Issue marked In Progress.');
+    } catch (err) {
+      setError('Unable to update issue status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMarkCompleted() {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await markIssueCompleted(issue.id);
+      setCurrentIssue({ ...issue, status: 'Completed' });
+      setSuccessMessage('Issue marked completed.');
     } catch (err) {
       setError('Unable to update issue status. Please try again.');
     } finally {
@@ -81,7 +120,7 @@ export default function IssueWorkScreen({ route }: Props) {
       allowsEditing: true,
     });
 
-    if (!result.canceled && result.assets?.length > 0) {
+    if (!result.canceled && result.assets.length > 0) {
       setPhotoUri(result.assets[0].uri);
       setSuccessMessage('Photo selected. Ready to upload.');
       setError(null);
@@ -99,10 +138,9 @@ export default function IssueWorkScreen({ route }: Props) {
     setSuccessMessage(null);
 
     try {
-      const fileName = photoUri.split('/').pop() ?? `completion-${currentIssue.id}.jpg`;
+      const fileName = photoUri.split('/').pop() ?? `completion-${issue.id}.jpg`;
       const fileType = 'image/jpeg';
-
-      await uploadCompletionPhoto(currentIssue.id, photoUri, fileName, fileType);
+      await uploadCompletionPhoto(issue.id, photoUri, fileName, fileType);
       setSuccessMessage('Completion photo uploaded successfully.');
       setPhotoUri(null);
     } catch (err) {
@@ -129,13 +167,13 @@ export default function IssueWorkScreen({ route }: Props) {
             </View>
           </View>
           <Text style={styles.description}>{currentIssue.description}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Assigned To</Text>
-            <Text style={styles.metaText}>{currentIssue.assignedTo ?? 'Worker'}</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailLabel}>Assigned to</Text>
+            <Text style={styles.detailValue}>{currentIssue.assignedTo ?? 'Worker'}</Text>
           </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Created</Text>
-            <Text style={styles.metaText}>{currentIssue.createdAt ?? 'Unknown'}</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailLabel}>Created</Text>
+            <Text style={styles.detailValue}>{currentIssue.createdAt ?? 'N/A'}</Text>
           </View>
         </View>
 
@@ -143,10 +181,10 @@ export default function IssueWorkScreen({ route }: Props) {
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Worker comments</Text>
+          <Text style={styles.sectionTitle}>Add a worker comment</Text>
           <TextInput
             style={styles.input}
-            placeholder="Write your update here"
+            placeholder="Type your update..."
             placeholderTextColor={Colors.subText}
             multiline
             value={comment}
@@ -156,23 +194,38 @@ export default function IssueWorkScreen({ route }: Props) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photo upload</Text>
+          <Text style={styles.sectionTitle}>Upload completion photo</Text>
           {photoUri ? <Image source={{ uri: photoUri }} style={styles.photoPreview} /> : null}
-          <View style={styles.buttonGroup}>
-            <Button title="Pick Photo" color={Colors.secondary} onPress={handlePickPhoto} />
-            <Button title="Upload Photo" color={Colors.success} onPress={handleUploadPhoto} />
+          <View style={styles.buttonRow}>
+            <View style={styles.buttonWrapper}>
+              <Button title="Pick Photo" color={Colors.secondary} onPress={handlePickPhoto} />
+            </View>
+            <View style={styles.buttonWrapper}>
+              <Button title="Upload Photo" color={Colors.success} onPress={handleUploadPhoto} />
+            </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Work actions</Text>
-          <Button
-            title={currentIssue.status === 'In Progress' ? 'Already In Progress' : 'Mark In Progress'}
-            color={Colors.primary}
-            onPress={handleMarkInProgress}
-            disabled={currentIssue.status === 'In Progress'}
-          />
-        </View>
+  <Text style={styles.sectionTitle}>Work actions</Text>
+
+  <View style={styles.buttonWrapper}>
+    <Button
+      title={currentIssue.status === 'In Progress' ? 'Already In Progress' : 'Mark In Progress'}
+      color={Colors.primary}
+      onPress={handleMarkInProgress}
+      disabled={currentIssue.status === 'In Progress'}
+    />
+  </View>
+
+  <View style={[styles.buttonWrapper, { marginTop: 12 }]}>
+    <Button
+      title="Mark as Done"
+      color={Colors.success}
+      onPress={handleMarkCompleted}
+    />
+  </View>
+</View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -187,24 +240,31 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: Platform.OS === 'android' ? 24 : 32,
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: Colors.background,
+  },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 22,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   title: {
+    color: Colors.text,
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
     color: Colors.subText,
-    marginBottom: 16,
+    fontSize: 14,
+    marginBottom: 18,
   },
   statusRow: {
     flexDirection: 'row',
@@ -213,18 +273,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusLabel: {
-    fontSize: 14,
     color: Colors.subText,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   statusBadge: {
     borderRadius: 999,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-  },
-  statusText: {
-    color: Colors.card,
-    fontWeight: '700',
   },
   inProgress: {
     backgroundColor: Colors.primary,
@@ -232,24 +288,35 @@ const styles = StyleSheet.create({
   pending: {
     backgroundColor: Colors.secondary,
   },
+  statusText: {
+    color: Colors.card,
+    fontWeight: '700',
+    fontSize: 12,
+  },
   description: {
     color: Colors.text,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  metaRow: {
+  detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  metaLabel: {
+  detailLabel: {
     color: Colors.subText,
     fontSize: 13,
   },
-  metaText: {
+  detailValue: {
     color: Colors.text,
-    fontWeight: '600',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  successText: {
+    color: Colors.success,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   section: {
     marginBottom: 24,
@@ -266,25 +333,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    textAlignVertical: 'top',
     padding: 14,
     marginBottom: 12,
     color: Colors.text,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    textAlignVertical: 'top',
   },
   photoPreview: {
     width: '100%',
-    height: 240,
-    borderRadius: 16,
+    height: 220,
+    borderRadius: 18,
     marginBottom: 14,
   },
-  successText: {
-    color: Colors.success,
-    fontWeight: '600',
-    marginBottom: 12,
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  buttonWrapper: {
+    flex: 1,
+    marginRight: 10,
   },
 });

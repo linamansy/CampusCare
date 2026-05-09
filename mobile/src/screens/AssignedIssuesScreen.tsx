@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { fetchAssignedIssues, type Issue } from '@/src/services/api';
 import { Colors } from '@/src/theme/colors';
 import { LoadingOverlay } from '@/src/components/LoadingOverlay';
 import { ErrorMessage } from '@/src/components/ErrorMessage';
 import { IssueCard } from '@/src/components/IssueCard';
-import type { WorkerStackParamList } from '@/src/navigation/types';
 
 const WORKER_ID = 1;
 
-type AssignedIssuesNavigationProp = NativeStackNavigationProp<WorkerStackParamList, 'AssignedIssues'>;
-
 export default function AssignedIssuesScreen() {
-  const navigation = useNavigation<AssignedIssuesNavigationProp>();
+  const router = useRouter();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +27,15 @@ export default function AssignedIssuesScreen() {
       const response = await fetchAssignedIssues(WORKER_ID);
       setIssues(response);
     } catch (err) {
-      setError('Unable to load assigned issues. Please check your network and try again.');
+      setError('Unable to load assigned issues. Make sure the backend is running and the phone is on the same network.');
     } finally {
       setLoading(false);
     }
   }
 
   function handleIssuePress(issue: Issue) {
-    navigation.navigate('IssueWork', { issue });
+    const encodedIssue = encodeURIComponent(JSON.stringify(issue));
+    router.push({ pathname: '/IssueWork', params: { issue: encodedIssue } });
   }
 
   if (loading) {
@@ -49,8 +46,9 @@ export default function AssignedIssuesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Assigned Issues</Text>
-        <Text style={styles.subtitle}>Tap any issue to work on it and update status from the worker screen.</Text>
+        <Text style={styles.subtitle}>Review your assigned tasks and tap one to update its status.</Text>
       </View>
+
       {error ? (
         <ErrorMessage message={error} />
       ) : (
@@ -61,8 +59,8 @@ export default function AssignedIssuesScreen() {
           renderItem={({ item }) => <IssueCard issue={item} onPress={() => handleIssuePress(item)} />}
           ListEmptyComponent={
             <View style={styles.emptyPlaceholder}>
-              <Text style={styles.emptyTitle}>No issues assigned yet.</Text>
-              <Text style={styles.emptyText}>Once work is assigned, those tasks will appear here.</Text>
+              <Text style={styles.emptyTitle}>No assigned issues yet.</Text>
+              <Text style={styles.emptyText}>Your assigned work will appear here once the backend sends it.</Text>
             </View>
           }
           onRefresh={loadAssignedIssues}
@@ -80,18 +78,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
   title: {
     fontSize: 28,
-    color: Colors.text,
     fontWeight: '800',
+    color: Colors.text,
   },
   subtitle: {
-    fontSize: 14,
-    color: Colors.subText,
     marginTop: 8,
-    lineHeight: 20,
+    color: Colors.subText,
+    fontSize: 15,
+    lineHeight: 22,
   },
   listContainer: {
     paddingBottom: 24,
@@ -104,19 +102,19 @@ const styles = StyleSheet.create({
   },
   emptyPlaceholder: {
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 24,
   },
   emptyTitle: {
-    fontSize: 18,
     color: Colors.text,
+    fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 14,
     color: Colors.subText,
+    fontSize: 14,
     textAlign: 'center',
-    maxWidth: 280,
+    maxWidth: 300,
     lineHeight: 20,
   },
 });

@@ -1,12 +1,5 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 
-export default function AppIndex() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/AssignedIssues');
-  }, [router]);
-
-  return null;
+export default function Index() {
+  return <Redirect href="/AssignedIssues" />;
 }

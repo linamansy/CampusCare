@@ -16,12 +16,13 @@ export function ErrorMessage({ message }: ErrorMessageProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.danger,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     marginVertical: 12,
   },
   text: {
     color: Colors.card,
+    fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
   },

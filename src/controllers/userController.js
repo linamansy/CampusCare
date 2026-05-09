@@ -3,7 +3,7 @@ const prisma = require('../prismaClient');
 const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker'];
 
 // GET all users
-exports.getAllUsers = async (req, res) => {
+exports.getAllUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -16,12 +16,12 @@ exports.getAllUsers = async (req, res) => {
 
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // CREATE user
-exports.createUser = async (req, res) => {
+exports.createUser = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
     const cleanName = typeof name === 'string' ? name.trim() : '';
@@ -60,7 +60,8 @@ exports.createUser = async (req, res) => {
         name: cleanName,
         email: cleanEmail,
         password,
-        role: cleanRole
+        role: cleanRole,
+        points: 0
       }
     });
 
@@ -68,6 +69,6 @@ exports.createUser = async (req, res) => {
 
     res.status(201).json(userWithoutPassword);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

@@ -10,6 +10,9 @@ const { verifyAuth } = require('../middleware/auth');
 const workerIssueController = require('../controllers/workerIssueController');
 
 const completionPhotoUpload = require('../middleware/completionPhotoUpload');
+const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
+
+const workerAuth = [authenticateToken, requireRole('Worker')];
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
 
@@ -53,7 +56,7 @@ const upload = multer({
 });
 
 // Worker route FIRST
-router.get('/assigned', workerIssueController.getAssignedIssues);
+router.get('/assigned', workerAuth, workerIssueController.getAssignedIssues);
 
 // Issue routes
 router.get('/', controller.getAllIssues);
@@ -82,12 +85,14 @@ router.post(
 );
 
 // Worker actions
-router.put('/:id/in-progress', workerIssueController.markInProgress);
+router.put('/:id/in-progress', workerAuth, workerIssueController.markInProgress);
+router.put('/:id/completed', workerAuth, workerIssueController.markCompleted);
 router.put('/:id/status', controller.updateIssueStatus);
-router.post('/comments', controller.createComment);
+router.post('/comments', workerAuth, controller.createComment);
 router.post(
   '/:id/completion-photo',
-  completionPhotoUpload.single('photo'),
+  workerAuth,
+  completionPhotoUpload.single('completionPhoto'),
   workerIssueController.uploadCompletionPhoto
 );
 

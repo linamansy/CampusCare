@@ -1,9 +1,28 @@
 const prisma = require('../prismaClient');
 const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
 const { parsePositiveInt } = require('../utils/issueHelpers');
+const { addPoints } = require('../services/pointsService');
 
-exports.getAssignedIssues = async (req, res) => {
-  const workerId = parsePositiveInt(req.query.workerId);
+const resolveWorkerId = (req, bodyWorkerId) => {
+  const parsedBodyWorkerId = parsePositiveInt(bodyWorkerId);
+  const tokenWorkerId = req.user ? parsePositiveInt(req.user.id) : null;
+
+  if (parsedBodyWorkerId && tokenWorkerId && parsedBodyWorkerId !== tokenWorkerId) {
+    return null;
+  }
+
+  return parsedBodyWorkerId || tokenWorkerId;
+};
+
+exports.getAssignedIssues = async (req, res, next) => {
+  const queryWorkerId = parsePositiveInt(req.query.workerId);
+  const tokenWorkerId = req.user ? parsePositiveInt(req.user.id) : null;
+
+  if (queryWorkerId && tokenWorkerId && queryWorkerId !== tokenWorkerId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const workerId = queryWorkerId || tokenWorkerId;
 
   if (!workerId) {
     return res.status(400).json({ error: 'Missing or invalid workerId' });
@@ -17,13 +36,13 @@ exports.getAssignedIssues = async (req, res) => {
 
     res.json(issues);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.markInProgress = async (req, res) => {
+exports.markInProgress = async (req, res, next) => {
   const issueId = parsePositiveInt(req.params.id);
-  const workerId = parsePositiveInt(req.body.workerId);
+  const workerId = resolveWorkerId(req, req.body.workerId);
 
   if (!issueId) {
     return res.status(400).json({ error: 'Invalid issue id' });
@@ -47,13 +66,13 @@ exports.markInProgress = async (req, res) => {
 
     res.json(issue);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.uploadCompletionPhoto = async (req, res) => {
+exports.uploadCompletionPhoto = async (req, res, next) => {
   const issueId = parsePositiveInt(req.params.id);
-  const workerId = parsePositiveInt(req.body.workerId);
+  const workerId = resolveWorkerId(req, req.body.workerId);
 
   if (!issueId) {
     return res.status(400).json({ error: 'Invalid issue id' });
@@ -80,8 +99,42 @@ exports.uploadCompletionPhoto = async (req, res) => {
       data: { completionPhotoUrl: photoUrl }
     });
 
+    await addPoints(workerId, 5);
+
     res.json(issue);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
+  }
+};
+
+exports.markCompleted = async (req, res, next) => {
+  const issueId = parsePositiveInt(req.params.id);
+  const workerId = resolveWorkerId(req, req.body.workerId);
+
+  if (!issueId) {
+    return res.status(400).json({ error: 'Invalid issue id' });
+  }
+
+  if (!workerId) {
+    return res.status(400).json({ error: 'Missing or invalid workerId' });
+  }
+
+  try {
+    const { error } = await findIssueAssignedToWorker(issueId, workerId);
+
+    if (error) {
+      return res.status(error.status).json({ error: error.message });
+    }
+
+    const issue = await prisma.issue.update({
+      where: { id: issueId },
+      data: { status: 'Completed' }
+    });
+
+    await addPoints(workerId, 10);
+
+    res.json(issue);
+  } catch (error) {
+    next(error);
   }
 };

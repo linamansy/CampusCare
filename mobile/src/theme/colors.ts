@@ -9,15 +9,3 @@ export const Colors = {
   subText: '#64748B',
   border: '#E2E8F0',
 };
-
-export const AppTheme = {
-  dark: false,
-  colors: {
-    primary: Colors.primary,
-    background: Colors.background,
-    card: Colors.card,
-    text: Colors.text,
-    border: Colors.border,
-    notification: Colors.primary,
-  },
-};

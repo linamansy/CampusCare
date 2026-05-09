@@ -1,32 +1,6 @@
-const prisma = require('../prismaClient');
-const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
-const { parsePositiveInt } = require('../utils/issueHelpers');
-
-const ALLOWED_CATEGORIES = [
-  'Plumbing',
-  'Electrical',
-  'HVAC',
-  'Cleaning',
-  'Maintenance',
-  'Other'
-];
-
-const MAX_TITLE_LENGTH = 100;
-const MAX_DESCRIPTION_LENGTH = 1000;
-const MAX_LOCATION_LENGTH = 200;
-
-// GET all issues
-exports.getAllIssues = async (req, res) => {
-  try {
-    const issues = await prisma.issue.findMany({
-      include: { user: true, comments: true },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json({ success: true, count: issues.length, data: issues });
-  } catch (error) {
-    res.status(500).json({ error: error.message, code: 'FETCH_ERROR' });
-  }
+} catch (error) {
+  next(error);
+}
 };
 
 // GET issue by id
@@ -60,10 +34,7 @@ exports.getIssueById = async (req, res) => {
     res.json({ success: true, data: issue });
 
   } catch (error) {
-    res.status(500).json({
-      error: error.message,
-      code: 'FETCH_ERROR'
-    });
+    next(error);
   }
 };
 
@@ -93,133 +64,12 @@ exports.getMyIssues = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
-      error: error.message,
-      code: 'FETCH_ERROR'
-    });
+    next(error);
   }
 };
-
-// CREATE issue
-exports.createIssue = async (req, res) => {
-  try {
-    const { title, description, category, location, userId } = req.body;
-
-    const rawUserId = req.userId ?? userId;
-
-    if (rawUserId == null) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        code: 'NO_AUTH'
-      });
-    }
-
-    const parsedUserId = parseInt(rawUserId, 10);
-
-    if (Number.isNaN(parsedUserId) || parsedUserId <= 0) {
-      return res.status(400).json({
-        error: 'Valid userId required',
-        code: 'INVALID_USER'
-      });
-    }
-
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Title is required',
-        code: 'INVALID_TITLE'
-      });
-    }
-
-    if (title.length > MAX_TITLE_LENGTH) {
-      return res.status(400).json({
-        error: 'Title must be 100 characters or less',
-        code: 'TITLE_TOO_LONG'
-      });
-    }
-
-    if (!description || typeof description !== 'string' || description.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Description is required',
-        code: 'INVALID_DESCRIPTION'
-      });
-    }
-
-    if (description.length > MAX_DESCRIPTION_LENGTH) {
-      return res.status(400).json({
-        error: 'Description must be 1000 characters or less',
-        code: 'DESCRIPTION_TOO_LONG'
-      });
-    }
-
-    if (!category || !ALLOWED_CATEGORIES.includes(category)) {
-      return res.status(400).json({
-        error: `Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`,
-        code: 'INVALID_CATEGORY'
-      });
-    }
-
-    if (!location || typeof location !== 'string' || location.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Location is required',
-        code: 'INVALID_LOCATION'
-      });
-    }
-
-    if (location.length > MAX_LOCATION_LENGTH) {
-      return res.status(400).json({
-        error: 'Location must be 200 characters or less',
-        code: 'LOCATION_TOO_LONG'
-      });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: parsedUserId }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        error: 'User not found',
-        code: 'USER_NOT_FOUND'
-      });
-    }
-
-    const role = (user.role || '').toLowerCase();
-
-    if (!role.includes('community')) {
-      return res.status(403).json({
-        error: 'Only Community Members can submit issues',
-        code: 'INVALID_ROLE'
-      });
-    }
-
-    const imagePath = req.file
-      ? `/uploads/issues/${req.file.filename}`
-      : null;
-
-    const issue = await prisma.issue.create({
-      data: {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        location: location.trim(),
-        image: imagePath,
-        status: 'Open',
-        userId: parsedUserId
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Issue created successfully',
-      data: issue
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      error: error.message,
-      code: 'INTERNAL_ERROR'
-    });
-  }
+} catch (error) {
+  next(error);
+}
 };
 
 // GET issues for specific user
@@ -247,9 +97,7 @@ exports.getUserIssues = async (req, res) => {
     res.json(issues);
 
   } catch (error) {
-    res.status(500).json({
-      error: error.message
-    });
+    next(error);
   }
 };
 
@@ -272,82 +120,6 @@ exports.getCommentsByIssue = async (req, res) => {
     res.json(comments);
 
   } catch (error) {
-    res.status(500).json({
-      error: error.message
-    });
-  }
-};
-
-// Generic status update used by manager actions
-exports.updateIssueStatus = async (req, res) => {
-  const id = parsePositiveInt(req.params.id);
-  const { status } = req.body;
-
-  if (!id) {
-    return res.status(400).json({ error: 'Invalid issue id' });
-  }
-
-  if (!status) {
-    return res.status(400).json({ error: 'Missing status' });
-  }
-
-  try {
-    const issue = await prisma.issue.update({
-      where: { id },
-      data: { status }
-    });
-
-    res.json(issue);
-  } catch (error) {
-    if (error?.code === 'P2025') {
-      return res.status(404).json({ error: 'Issue not found' });
-    }
-
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Add comment. Workers may pass workerId to enforce assignment.
-exports.createComment = async (req, res) => {
-  const { text, issueId, workerId } = req.body;
-  const parsedIssueId = parsePositiveInt(issueId);
-  const parsedWorkerId = workerId == null ? null : parsePositiveInt(workerId);
-
-  if (!text || issueId == null) {
-    return res.status(400).json({ error: 'Missing text or issueId' });
-  }
-
-  if (!parsedIssueId) {
-    return res.status(400).json({ error: 'Invalid issueId' });
-  }
-
-  if (workerId != null && !parsedWorkerId) {
-    return res.status(400).json({ error: 'Invalid workerId' });
-  }
-
-  try {
-    if (parsedWorkerId) {
-      const { error } = await findIssueAssignedToWorker(parsedIssueId, parsedWorkerId);
-
-      if (error) {
-        return res.status(error.status).json({ error: error.message });
-      }
-    } else {
-      const issue = await prisma.issue.findUnique({
-        where: { id: parsedIssueId }
-      });
-
-      if (!issue) {
-        return res.status(404).json({ error: 'Issue not found' });
-      }
-    }
-
-    const comment = await prisma.comment.create({
-      data: { text, issueId: parsedIssueId }
-    });
-
-    res.status(201).json(comment);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

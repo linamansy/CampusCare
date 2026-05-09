@@ -1,46 +1,32 @@
+const jwt = require('jsonwebtoken');
 const prisma = require('../prismaClient');
+const userController = require('./userController');
 
-const authenticateUser = async (email, password) => {
-  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-secret';
+const JWT_OPTIONS = { expiresIn: '2h' };
 
-  if (!cleanEmail || !password) {
-    return null;
-  }
+exports.register = userController.createUser;
 
-  const user = await prisma.user.findUnique({
-    where: { email: cleanEmail }
-  });
-
-  if (!user || user.password !== password) {
-    return null;
-  }
-
-  const { password: _password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
-};
-
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    if (!cleanEmail || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Missing email or password' });
     }
 
-    const user = await authenticateUser(cleanEmail, password);
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    res.json({
-      message: 'Login successful',
-      user
+    const user = await prisma.user.findUnique({
+      where: { email }
     });
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, JWT_OPTIONS);
+
+    return res.json({ success: true, token, user: { id: user.id, email: user.email, role: user.role, points: user.points } });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return next(error);
   }
 };
-
-exports.authenticateUser = authenticateUser;
