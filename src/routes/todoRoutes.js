@@ -4,20 +4,39 @@ const path = require('path');
 const multer = require('multer');
 
 const router = express.Router();
+
 const controller = require('../controllers/todoController');
-const { verifyAuth } = require('../middleware/auth');
 
 const workerIssueController = require('../controllers/workerIssueController');
 
-const completionPhotoUpload = require('../middleware/completionPhotoUpload');
-const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
+const { verifyAuth } = require('../middleware/auth');
 
-const workerAuth = [authenticateToken, requireRole('Worker')];
+const {
+  authenticateToken,
+  requireRole
+} = require('../middleware/authMiddleware');
 
-const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
+const completionPhotoUpload = require(
+  '../middleware/completionPhotoUpload'
+);
+
+const workerAuth = [
+  authenticateToken,
+  requireRole('Worker')
+];
+
+const uploadDir = path.join(
+  __dirname,
+  '..',
+  '..',
+  'uploads',
+  'issues'
+);
 
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  fs.mkdirSync(uploadDir, {
+    recursive: true
+  });
 }
 
 const storage = multer.diskStorage({
@@ -26,8 +45,13 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, '_');
-    cb(null, `${Date.now()}-${safeName}`);
+    const safeName =
+      file.originalname.replace(/\s+/g, '_');
+
+    cb(
+      null,
+      `${Date.now()}-${safeName}`
+    );
   }
 });
 
@@ -50,18 +74,51 @@ const upload = multer({
     }
 
     return cb(
-      new Error('Only PNG and JPG images are allowed')
+      new Error(
+        'Only PNG and JPG images are allowed'
+      )
     );
   }
 });
 
-// Worker route FIRST
-router.get('/assigned', workerAuth, workerIssueController.getAssignedIssues);
+// Worker routes
+router.get(
+  '/assigned',
+  workerAuth,
+  workerIssueController.getAssignedIssues
+);
+
+router.put(
+  '/:id/in-progress',
+  workerAuth,
+  workerIssueController.markInProgress
+);
+
+router.put(
+  '/:id/completed',
+  workerAuth,
+  workerIssueController.markCompleted
+);
+
+router.post(
+  '/:id/completion-photo',
+  workerAuth,
+  completionPhotoUpload.single(
+    'completionPhoto'
+  ),
+  workerIssueController.uploadCompletionPhoto
+);
 
 // Issue routes
-router.get('/', controller.getAllIssues);
+router.get(
+  '/',
+  controller.getAllIssues
+);
 
-router.get('/user', controller.getUserIssues);
+router.get(
+  '/user',
+  controller.getUserIssues
+);
 
 router.get(
   '/user/:userId',
@@ -69,12 +126,27 @@ router.get(
   controller.getMyIssues
 );
 
-router.get('/:id', controller.getIssueById);
+router.get(
+  '/:id',
+  controller.getIssueById
+);
 
-// Comments routes
-router.get('/:id/comments', controller.getCommentsByIssue);
+// Comments
+router.get(
+  '/:id/comments',
+  controller.getCommentsByIssue
+);
 
-router.post('/:id/comments', controller.createComment);
+router.post(
+  '/:id/comments',
+  controller.createComment
+);
+
+router.post(
+  '/comments',
+  workerAuth,
+  controller.createComment
+);
 
 // Create issue
 router.post(
@@ -84,16 +156,10 @@ router.post(
   controller.createIssue
 );
 
-// Worker actions
-router.put('/:id/in-progress', workerAuth, workerIssueController.markInProgress);
-router.put('/:id/completed', workerAuth, workerIssueController.markCompleted);
-router.put('/:id/status', controller.updateIssueStatus);
-router.post('/comments', workerAuth, controller.createComment);
-router.post(
-  '/:id/completion-photo',
-  workerAuth,
-  completionPhotoUpload.single('completionPhoto'),
-  workerIssueController.uploadCompletionPhoto
+// Update status
+router.put(
+  '/:id/status',
+  controller.updateIssueStatus
 );
 
 module.exports = router;

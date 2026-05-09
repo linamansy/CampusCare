@@ -1,32 +1,185 @@
-const jwt = require('jsonwebtoken');
 const prisma = require('../prismaClient');
-const userController = require('./userController');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-secret';
-const JWT_OPTIONS = { expiresIn: '2h' };
+const bcrypt = require('bcryptjs');
 
-exports.register = userController.createUser;
+const jwt = require('jsonwebtoken');
 
-exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
+const crypto = require('crypto');
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Missing email or password' });
-    }
+const { randomUUID } = require('crypto');
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+const { revokeToken } = require('../utils/tokenRevocationStore');
 
-    if (!user || user.password !== password) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
+const ACCESS_TOKEN_EXPIRES_IN =
+  process.env.JWT_EXPIRES_IN || '1h';
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, JWT_OPTIONS);
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'campuscare-dev-secret-change-me';
 
-    return res.json({ success: true, token, user: { id: user.id, email: user.email, role: user.role, points: user.points } });
-  } catch (error) {
-    return next(error);
-  }
+const VALID_ROLES = [
+  'Community Member',
+  'Facility Manager',
+  'Worker'
+];
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
+const RESET_TOKEN_EXPIRY_MS =
+  15 * 60 * 1000;
+
+const otpStore = new Map();
+
+const resetTokenStore = new Map();
+
+const sanitizeUser = (user) => {
+  const {
+    password: _password,
+    ...userWithoutPassword
+  } = user;
+
+  return userWithoutPassword;
 };
+
+const cleanEmailValue = (email) =>
+  typeof email === 'string'
+    ? email.trim().toLowerCase()
+    : '';
+
+const isValidEmail = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const generateOtp = () =>
+  Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+const isHashedPassword = (password) =>
+  /^\$2[aby]\$/.test(password);
+
+const buildTokenPayload = (user) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role
+});
+
+const generateAccessToken = (user) =>
+  jwt.sign(
+    {
+      ...buildTokenPayload(user),
+      jti: randomUUID()
+    },
+    JWT_SECRET,
+    {
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN
+    }
+  );
+
+const authenticateUser = async (
+  email,
+  password
+) => {
+  const cleanEmail =
+    cleanEmailValue(email);
+
+  if (!cleanEmail || !password) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: cleanEmail
+    }
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  const passwordMatches =
+    isHashedPassword(user.password)
+      ? await bcrypt.compare(
+          password,
+          user.password
+        )
+      : user.password === password;
+
+  if (!passwordMatches) {
+    return null;
+  }
+
+  if (!isHashedPassword(user.password)) {
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
+
+    await prisma.user.update({
+      where: {
+        id: user.id
+      },
+
+      data: {
+        password: hashedPassword
+      }
+    });
+  }
+
+  return sanitizeUser(user);
+};
+
+// REGISTER
+exports.register = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      role
+    } = req.body;
+
+    const cleanName =
+      typeof name === 'string'
+        ? name.trim()
+        : '';
+
+    const cleanEmail =
+      cleanEmailValue(email);
+
+    const selectedRole =
+      role || 'Community Member';
+
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !password
+    ) {
+      return res.status(400).json({
+        error:
+          'Name, email, and password are required'
+      });
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({
+        error: 'Invalid email format'
+      });
+    }
+
+    if (
+      !VALID_ROLES.includes(selectedRole)
+    ) {
+      return res.status(400).json({
+        error: `Role must be one of: ${VALID_ROLES.join(
+          ', '
+        )}`
+      });
+    }
+
+    const existingUser =
+      await prisma.user.findUnique({
+        where: {
+          email: cleanEmail
+        }
+      });
+
+    if (existingUser) {
+      return res.status(

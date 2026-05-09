@@ -1,277 +1,185 @@
-
-
 const prisma = require('../prismaClient');
 
-// GET all issues
-exports.getAllIssues = async (req, res) => {
-  try {
-    const issues = await prisma.issue.findMany({
-      include: {
-        user: true,
-        comments: true
+const bcrypt = require('bcryptjs');
+
+const jwt = require('jsonwebtoken');
+
+const crypto = require('crypto');
+
+const { randomUUID } = require('crypto');
+
+const { revokeToken } = require('../utils/tokenRevocationStore');
+
+const ACCESS_TOKEN_EXPIRES_IN =
+  process.env.JWT_EXPIRES_IN || '1h';
+
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'campuscare-dev-secret-change-me';
+
+const VALID_ROLES = [
+  'Community Member',
+  'Facility Manager',
+  'Worker'
+];
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
+const RESET_TOKEN_EXPIRY_MS =
+  15 * 60 * 1000;
+
+const otpStore = new Map();
+
+const resetTokenStore = new Map();
+
+const sanitizeUser = (user) => {
+  const {
+    password: _password,
+    ...userWithoutPassword
+  } = user;
+
+  return userWithoutPassword;
+};
+
+const cleanEmailValue = (email) =>
+  typeof email === 'string'
+    ? email.trim().toLowerCase()
+    : '';
+
+const isValidEmail = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const generateOtp = () =>
+  Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+const isHashedPassword = (password) =>
+  /^\$2[aby]\$/.test(password);
+
+const buildTokenPayload = (user) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role
+});
+
+const generateAccessToken = (user) =>
+  jwt.sign(
+    {
+      ...buildTokenPayload(user),
+      jti: randomUUID()
+    },
+    JWT_SECRET,
+    {
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN
+    }
+  );
+
+const authenticateUser = async (
+  email,
+  password
+) => {
+  const cleanEmail =
+    cleanEmailValue(email);
+
+  if (!cleanEmail || !password) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: cleanEmail
+    }
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  const passwordMatches =
+    isHashedPassword(user.password)
+      ? await bcrypt.compare(
+          password,
+          user.password
+        )
+      : user.password === password;
+
+  if (!passwordMatches) {
+    return null;
+  }
+
+  if (!isHashedPassword(user.password)) {
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
+
+    await prisma.user.update({
+      where: {
+        id: user.id
       },
-      orderBy: { createdAt: 'desc' }
-    });
 
-    res.json({
-      success: true,
-      count: issues.length,
-      data: issues
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// GET issue by id
-exports.getIssueById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const parsedId = parseInt(id, 10);
-
-    if (Number.isNaN(parsedId)) {
-      return res.status(400).json({
-        error: 'Valid issue ID required',
-        code: 'INVALID_ID'
-      });
-    }
-
-    const issue = await prisma.issue.findUnique({
-      where: { id: parsedId },
-      include: {
-        user: true,
-        comments: true
-      }
-    });
-
-    if (!issue) {
-      return res.status(404).json({
-        error: 'Issue not found',
-        code: 'NOT_FOUND'
-      });
-    }
-
-    res.json({ success: true, data: issue });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// GET issues by user
-exports.getMyIssues = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const parsedUserId = parseInt(userId, 10);
-    const authUserId = req.userId;
-
-    if (Number.isNaN(parsedUserId)) {
-      return res.status(400).json({
-        error: 'Valid userId required',
-        code: 'INVALID_USER_ID'
-      });
-    }
-
-    if (authUserId && authUserId !== parsedUserId) {
-      return res.status(403).json({
-        error: 'Forbidden',
-        code: 'USER_ID_MISMATCH'
-      });
-    }
-
-    const issues = await prisma.issue.findMany({
-      where: { userId: parsedUserId },
-      include: { comments: true },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json({
-      success: true,
-      count: issues.length,
-      data: issues
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// GET issues for specific user
-exports.getUserIssues = async (req, res) => {
-  try {
-    const userId = parseInt(req.query.userId);
-    const { status } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        error: 'userId is required'
-      });
-    }
-
-    const where = { userId };
-
-    if (status) {
-      where.status = status;
-    }
-
-    const issues = await prisma.issue.findMany({
-      where
-    });
-
-    res.json(issues);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// GET comments by issue
-exports.getCommentsByIssue = async (req, res) => {
-  try {
-    const issueId = parseInt(req.params.issueId || req.params.id);
-
-    if (Number.isNaN(issueId)) {
-      return res.status(400).json({
-        error: 'Invalid issue id'
-      });
-    }
-
-    const comments = await prisma.comment.findMany({
-      where: { issueId },
-      orderBy: { id: 'asc' }
-    });
-
-    res.json(comments);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// CREATE issue
-exports.createIssue = async (req, res) => {
-  try {
-    const { title, description, category, location } = req.body;
-    const userId = req.userId || (req.user && req.user.id);
-
-    if (!title || !description || !category || !location) {
-      return res.status(400).json({
-        error: 'Title, description, category, and location are required'
-      });
-    }
-    if (!userId) {
-      return res.status(401).json({
-        error: 'Authentication required to create issue'
-      });
-    }
-
-    const image = req.file ? `/uploads/issues/${req.file.filename}` : null;
-
-    const issue = await prisma.issue.create({
       data: {
-        title,
-        description,
-        category,
-        location,
-        image,
-        userId
-      },
-      include: {
-        user: true
+        password: hashedPassword
       }
     });
-
-    res.status(201).json({
-      success: true,
-      data: issue
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
+
+  return sanitizeUser(user);
 };
 
-// CREATE comment
-exports.createComment = async (req, res) => {
+// REGISTER
+exports.register = async (req, res) => {
   try {
-    const { text, issueId: bodyIssueId } = req.body;
-    const issueId = parseInt(req.params.id || bodyIssueId, 10);
+    const {
+      name,
+      email,
+      password,
+      role
+    } = req.body;
 
-    if (!text || Number.isNaN(issueId)) {
+    const cleanName =
+      typeof name === 'string'
+        ? name.trim()
+        : '';
+
+    const cleanEmail =
+      cleanEmailValue(email);
+
+    const selectedRole =
+      role || 'Community Member';
+
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !password
+    ) {
       return res.status(400).json({
-        error: 'Text and issueId are required'
+        error:
+          'Name, email, and password are required'
       });
     }
 
-    // Verify issue exists
-    const issue = await prisma.issue.findUnique({
-      where: { id: issueId }
-    });
-
-    if (!issue) {
-      return res.status(404).json({
-        error: 'Issue not found'
-      });
-    }
-
-    const comment = await prisma.comment.create({
-      data: {
-        text,
-        issueId
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      data: comment
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// UPDATE issue status
-exports.updateIssueStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const parsedId = parseInt(id, 10);
-
-    if (Number.isNaN(parsedId)) {
+    if (!isValidEmail(cleanEmail)) {
       return res.status(400).json({
-        error: 'Valid issue ID required'
+        error: 'Invalid email format'
       });
     }
 
-    const validStatuses = ['Open', 'In Progress', 'Completed'];
-    if (!validStatuses.includes(status)) {
+    if (
+      !VALID_ROLES.includes(selectedRole)
+    ) {
       return res.status(400).json({
-        error: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+        error: `Role must be one of: ${VALID_ROLES.join(
+          ', '
+        )}`
       });
     }
 
-    const issue = await prisma.issue.update({
-      where: { id: parsedId },
-      data: { status },
-      include: {
-        user: true,
-        comments: true
-      }
-    });
-
-    res.json({
-      success: true,
-      data: issue
-    });
-
-  } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({
-        error: 'Issue not found'
+    const existingUser =
+      await prisma.user.findUnique({
+        where: {
+          email: cleanEmail
+        }
       });
-    }
-    res.status(500).json({ error: error.message });
-  }
-};
+
+    if (existingUser) {
+      return res.status(

@@ -9,39 +9,60 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  name     String
-  email    String  @unique
-  password String
-  role     String
-  points   Int     @default(0)
-  issues   Issue[]
+  id            Int       @id @default(autoincrement())
+
+  name          String
+  email         String    @unique
+  password      String
+
+  role          String
+
+  points        Int       @default(0)
+
+  isActive      Boolean   @default(true)
+  isVerified    Boolean   @default(false)
+
+  issues        Issue[]
 }
 
 model Issue {
-  id                 Int       @id @default(autoincrement())
-  title              String    @db.VarChar(100)
-  description        String    @db.Text
-  status             String    @default("Open")
-  category           String
-  location           String    @db.VarChar(200)
+  id                  Int       @id @default(autoincrement())
 
-  image              String?
-  completionPhotoUrl String?
+  title               String    @db.VarChar(100)
 
-  userId             Int
-  assignedTo         Int?
+  description         String    @db.Text
 
-  comments           Comment[]
-  user               User      @relation(fields: [userId], references: [id])
+  status              String    @default("Submitted/Pending")
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  priority            String    @default("Normal")
+
+  category            String
+
+  location            String    @db.VarChar(200)
+
+  image               String?
+
+  completionPhotoUrl  String?
+
+  userId              Int
+
+  assignedTo          Int?
+
+  comments            Comment[]
+
+  user                User      @relation(fields: [userId], references: [id])
+
+  createdAt           DateTime  @default(now())
+
+  updatedAt           DateTime  @updatedAt
 }
 
 model Comment {
-  id      Int    @id @default(autoincrement())
-  text    String
-  issueId Int
-  issue   Issue  @relation(fields: [issueId], references: [id])
+  id          Int       @id @default(autoincrement())
+
+  text        String
+
+  issueId     Int
+
+  issue       Issue     @relation(fields: [issueId], references: [id])
 }
