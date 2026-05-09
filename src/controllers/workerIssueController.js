@@ -1,6 +1,9 @@
 const prisma = require('../prismaClient');
 const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
-const { parsePositiveInt } = require('../utils/issueHelpers');
+const {
+  isValidStatusTransition,
+  parsePositiveInt
+} = require('../utils/issueHelpers');
 
 exports.getAssignedIssues = async (req, res) => {
   const workerId = parsePositiveInt(req.query.workerId);
@@ -38,6 +41,21 @@ exports.markInProgress = async (req, res) => {
 
     if (error) {
       return res.status(error.status).json({ error: error.message });
+    }
+
+    const currentIssue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: { status: true }
+    });
+
+    if (!currentIssue) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    if (!isValidStatusTransition(currentIssue.status, 'In Progress')) {
+      return res.status(409).json({
+        error: `Invalid status transition from ${currentIssue.status} to In Progress`
+      });
     }
 
     const issue = await prisma.issue.update({

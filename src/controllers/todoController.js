@@ -1,6 +1,14 @@
 const prisma = require('../prismaClient');
 const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
-const { parsePositiveInt } = require('../utils/issueHelpers');
+const {
+  ALLOWED_STATUSES,
+  isAllowedStatus,
+  isValidStatusTransition,
+  normalizeLocation,
+  normalizeStatus,
+  parsePositiveInt,
+  sanitizeText
+} = require('../utils/issueHelpers');
 
 const ALLOWED_CATEGORIES = [
   'Plumbing',
@@ -14,6 +22,8 @@ const ALLOWED_CATEGORIES = [
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_LOCATION_LENGTH = 200;
+const PRIORITY_HIGH_THRESHOLD = 1;
+const CLOSED_STATUSES = ['Resolved', 'Rejected'];
 
 // GET all issues
 exports.getAllIssues = async (req, res) => {
@@ -123,28 +133,32 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    const cleanTitle = sanitizeText(title);
+
+    if (!cleanTitle) {
       return res.status(400).json({
         error: 'Title is required',
         code: 'INVALID_TITLE'
       });
     }
 
-    if (title.length > MAX_TITLE_LENGTH) {
+    if (cleanTitle.length > MAX_TITLE_LENGTH) {
       return res.status(400).json({
         error: 'Title must be 100 characters or less',
         code: 'TITLE_TOO_LONG'
       });
     }
 
-    if (!description || typeof description !== 'string' || description.trim().length === 0) {
+    const cleanDescription = sanitizeText(description);
+
+    if (!cleanDescription) {
       return res.status(400).json({
         error: 'Description is required',
         code: 'INVALID_DESCRIPTION'
       });
     }
 
-    if (description.length > MAX_DESCRIPTION_LENGTH) {
+    if (cleanDescription.length > MAX_DESCRIPTION_LENGTH) {
       return res.status(400).json({
         error: 'Description must be 1000 characters or less',
         code: 'DESCRIPTION_TOO_LONG'
@@ -158,14 +172,16 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    if (!location || typeof location !== 'string' || location.trim().length === 0) {
+    const cleanLocation = normalizeLocation(location);
+
+    if (!cleanLocation) {
       return res.status(400).json({
         error: 'Location is required',
         code: 'INVALID_LOCATION'
       });
     }
 
-    if (location.length > MAX_LOCATION_LENGTH) {
+    if (cleanLocation.length > MAX_LOCATION_LENGTH) {
       return res.status(400).json({
         error: 'Location must be 200 characters or less',
         code: 'LOCATION_TOO_LONG'
@@ -196,14 +212,29 @@ exports.createIssue = async (req, res) => {
       ? `/uploads/issues/${req.file.filename}`
       : null;
 
+    const similarIssueCount = await prisma.issue.count({
+      where: {
+        location: {
+          equals: cleanLocation,
+          mode: 'insensitive'
+        },
+        status: { notIn: CLOSED_STATUSES }
+      }
+    });
+
+    const priority = similarIssueCount >= PRIORITY_HIGH_THRESHOLD
+      ? 'High'
+      : 'Normal';
+
     const issue = await prisma.issue.create({
       data: {
-        title: title.trim(),
-        description: description.trim(),
+        title: cleanTitle,
+        description: cleanDescription,
         category,
-        location: location.trim(),
+        location: cleanLocation,
         image: imagePath,
-        status: 'Open',
+        status: 'Submitted/Pending',
+        priority,
         userId: parsedUserId
       }
     });
@@ -287,14 +318,37 @@ exports.updateIssueStatus = async (req, res) => {
     return res.status(400).json({ error: 'Invalid issue id' });
   }
 
-  if (!status) {
+  const nextStatus = normalizeStatus(status);
+
+  if (!nextStatus) {
     return res.status(400).json({ error: 'Missing status' });
   }
 
+  if (!isAllowedStatus(nextStatus)) {
+    return res.status(400).json({
+      error: `Status must be one of: ${ALLOWED_STATUSES.join(', ')}`
+    });
+  }
+
   try {
+    const currentIssue = await prisma.issue.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+
+    if (!currentIssue) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    if (!isValidStatusTransition(currentIssue.status, nextStatus)) {
+      return res.status(409).json({
+        error: `Invalid status transition from ${currentIssue.status} to ${nextStatus}`
+      });
+    }
+
     const issue = await prisma.issue.update({
       where: { id },
-      data: { status }
+      data: { status: nextStatus }
     });
 
     res.json(issue);
@@ -313,7 +367,9 @@ exports.createComment = async (req, res) => {
   const parsedIssueId = parsePositiveInt(issueId);
   const parsedWorkerId = workerId == null ? null : parsePositiveInt(workerId);
 
-  if (!text || issueId == null) {
+  const cleanText = sanitizeText(text);
+
+  if (!cleanText || issueId == null) {
     return res.status(400).json({ error: 'Missing text or issueId' });
   }
 
@@ -343,7 +399,7 @@ exports.createComment = async (req, res) => {
     }
 
     const comment = await prisma.comment.create({
-      data: { text, issueId: parsedIssueId }
+      data: { text: cleanText, issueId: parsedIssueId }
     });
 
     res.status(201).json(comment);

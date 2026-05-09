@@ -21,7 +21,8 @@ model Issue {
   id                 Int       @id @default(autoincrement())
   title              String    @db.VarChar(100)
   description        String    @db.Text
-  status             String    @default("Open")
+  status             String    @default("Submitted/Pending")
+  priority           String    @default("Normal")
   category           String
   location           String    @db.VarChar(200)
 
