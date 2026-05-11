@@ -1,4 +1,3 @@
-```javascript id="h8k2qm"
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -6,7 +5,8 @@ const multer = require('multer');
 
 const router = express.Router();
 
-const controller = require('../controllers/todoController');
+const controller =
+  require('../controllers/todoController');
 
 const workerIssueController =
   require('../controllers/workerIssueController');
@@ -127,6 +127,12 @@ router.get(
 );
 
 router.get(
+  '/my',
+  verifyAuth,
+  controller.getMyIssues
+);
+
+router.get(
   '/user',
   controller.getUserIssues
 );
@@ -142,6 +148,20 @@ router.get(
   controller.getIssueById
 );
 
+// Notifications
+
+router.get(
+  '/notifications',
+  verifyAuth,
+  controller.getUserNotifications
+);
+
+router.put(
+  '/notifications/:id/read',
+  verifyAuth,
+  controller.markNotificationRead
+);
+
 // Comments
 
 router.get(
@@ -151,6 +171,7 @@ router.get(
 
 router.post(
   '/:id/comments',
+  verifyAuth,
   controller.createComment
 );
 
@@ -169,12 +190,49 @@ router.post(
   controller.createIssue
 );
 
-// Update status
+// Update issue
 
 router.put(
   '/:id/status',
+  verifyAuth,
   controller.updateIssueStatus
 );
 
+router.put(
+  '/:id/assign',
+  verifyAuth,
+  controller.assignWorker
+);
+
+router.put(
+  '/:id/close',
+  verifyAuth,
+  controller.closeIssue
+);
+
+// Upload issue photo
+
+router.post(
+  '/:id/photo',
+  verifyAuth,
+  upload.single('image'),
+  controller.uploadIssuePhoto
+);
+
+// Verify issue
+
+router.post(
+  '/:id/verify',
+  verifyAuth,
+  controller.verifyResolution
+);
+
+// Delete issue
+
+router.delete(
+  '/:id',
+  verifyAuth,
+  controller.deleteIssue
+);
+
 module.exports = router;
-```

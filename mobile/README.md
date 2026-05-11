@@ -1,50 +1,203 @@
-# Welcome to your Expo app 👋
+````md id="r8m2qp"
+# CampusCare Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native Expo application for the CampusCare issue management system.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Project Structure
 
 ```bash
-npm run reset-project
+mobile/
+├── src/
+│   ├── screens/          # Screen components
+│   ├── components/       # Reusable UI components
+│   ├── navigation/       # Navigation configuration
+│   ├── services/         # API services
+│   ├── styles/           # Style definitions
+│   ├── assets/           # Images and assets
+│   ├── theme/            # Colors and theme constants
+│   ├── context/          # React context providers
+│   └── utils/            # Utility functions
+├── App.js                # Main app component
+└── package.json          # Dependencies
+````
+
+---
+
+## Setup Instructions
+
+### 1. Navigate to mobile directory
+
+```bash
+cd mobile
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Install dependencies
 
-## Learn more
+```bash
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Start the Expo development server
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start
+```
 
-## Join the community
+### 4. Run the app
 
-Join our community of developers creating universal apps.
+* Android:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+  ```bash
+  npm run android
+  ```
+
+* iOS:
+
+  ```bash
+  npm run ios
+  ```
+
+* Web:
+
+  ```bash
+  npm run web
+  ```
+
+* Expo Go:
+  Scan the QR code generated in the terminal.
+
+---
+
+## Features Implemented
+
+### Authentication
+
+* User registration
+* Login/logout
+* OTP verification
+* Password reset
+* Role-based authentication
+
+### Issue Management
+
+* Submit issue
+* Upload issue image
+* Issue status tracking
+* Comments system
+* Worker assignment
+* Completion photo uploads
+
+### Roles Supported
+
+* Community Member
+* Worker
+* Facility Manager
+* Admin
+
+### Worker Features
+
+* Assigned issues
+* Mark issue in progress
+* Upload completion proof
+* Mark issue completed
+
+### Manager Features
+
+* Assign workers
+* Resolve/reject issues
+* Request rework
+* Worker management
+
+---
+
+## API Integration
+
+Backend base URL:
+
+```txt
+http://localhost:3000/api
+```
+
+### Main Endpoints
+
+* `POST /api/auth/login`
+* `POST /api/auth/register`
+* `GET /api/issues`
+* `POST /api/issues`
+* `PUT /api/issues/:id/status`
+* `POST /api/issues/:id/completion-photo`
+* `GET /api/manager/issues`
+
+---
+
+## Shared Components
+
+* CustomButton
+* CustomInput
+* LoadingSpinner
+* StatusBadge
+* IssueCard
+* ScreenHeader
+* EmptyState
+* ErrorMessage
+
+---
+
+## Navigation
+
+Uses React Navigation with role-based navigation structure.
+
+---
+
+## Technologies Used
+
+* React Native
+* Expo
+* React Navigation
+* Axios
+* Context API
+* Node.js Backend
+* Prisma ORM
+* PostgreSQL
+
+---
+
+## Backend Requirements
+
+Ensure backend server is running on:
+
+```txt
+http://localhost:3000
+```
+
+---
+
+## Testing
+
+### Test Authentication
+
+1. Register account
+2. Login
+3. Verify OTP
+4. Reset password
+
+### Test Issue Flow
+
+1. Submit issue
+2. Upload image
+3. Assign worker
+4. Mark in progress
+5. Upload completion photo
+6. Resolve issue
+
+---
+
+## Notes
+
+* Expo SDK 54
+* Uses Prisma with PostgreSQL
+* Supports image uploads
+* Includes role-based access control
+
+```
+```

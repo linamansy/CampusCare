@@ -1,9 +1,9 @@
-```javascript id="n2k7qp"
 const express = require('express');
 
 const router = express.Router();
 
-const authController = require('../controllers/authController');
+const authController =
+  require('../controllers/authController');
 
 const {
   authLimiter
@@ -14,6 +14,7 @@ const {
 } = require('../middleware/auth');
 
 // Current user
+
 router.get(
   '/me',
   verifyAuth,
@@ -21,6 +22,7 @@ router.get(
 );
 
 // Authentication
+
 router.post(
   '/login',
   authLimiter,
@@ -39,6 +41,7 @@ router.post(
 );
 
 // OTP routes
+
 router.post(
   '/send-otp',
   authLimiter,
@@ -52,6 +55,7 @@ router.post(
 );
 
 // Password reset
+
 router.post(
   '/forgot-password',
   authLimiter,
@@ -65,4 +69,3 @@ router.post(
 );
 
 module.exports = router;
-```

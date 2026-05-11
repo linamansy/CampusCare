@@ -1,4 +1,3 @@
-```javascript id="m8o4qt"
 const prisma = require('../prismaClient');
 
 const bcrypt = require('bcryptjs');
@@ -252,11 +251,10 @@ exports.register = async (
         'Registration successful',
       user: sanitizeUser(user)
     });
+
   } catch (error) {
     res.status(500).json({
       error: error.message
     });
   }
 };
-```
-

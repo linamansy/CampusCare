@@ -1,13 +1,32 @@
 import React from 'react';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import {
+  View,
+  ActivityIndicator,
+  Text,
+  StyleSheet
+} from 'react-native';
 
-const LoadingSpinner = ({ message }) => (
-  <View style={styles.container}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={styles.message}>{message || 'Loading…'}</Text>
-  </View>
-);
+import { COLORS } from '../theme/colors';
+
+const LoadingSpinner = ({
+  size = 'large',
+  color = COLORS.primary,
+  message = 'Loading...',
+  style = {}
+}) => {
+  return (
+    <View style={[styles.container, style]}>
+      <ActivityIndicator
+        size={size}
+        color={color}
+      />
+
+      <Text style={styles.message}>
+        {message}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -15,14 +34,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: colors.background,
+    backgroundColor: COLORS.background,
   },
+
   message: {
     marginTop: 16,
-    color: colors.textSecondary,
+    color: COLORS.subText,
     fontSize: 16,
     textAlign: 'center',
   },
 });
 
 export default LoadingSpinner;
+
+

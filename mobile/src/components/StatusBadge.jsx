@@ -1,19 +1,51 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import {
+  View,
+  Text,
+  StyleSheet
+} from 'react-native';
 
-const StatusBadge = ({ status }) => {
-  const statusLabel = status ? status.toUpperCase() : 'PENDING';
-  const badgeColor =
-    statusLabel === 'OPEN' || statusLabel === 'PENDING'
-      ? colors.warning
-      : statusLabel === 'RESOLVED' || statusLabel === 'CLOSED'
-      ? colors.success
-      : colors.danger;
+import { COLORS } from '../theme/colors';
+
+const StatusBadge = ({
+  status,
+  style = {}
+}) => {
+
+  const statusLabel = status
+    ? status.replace('_', ' ').toUpperCase()
+    : 'PENDING';
+
+  const getBadgeColor = () => {
+    switch (statusLabel) {
+      case 'OPEN':
+      case 'PENDING':
+        return COLORS.warning;
+
+      case 'IN PROGRESS':
+        return COLORS.primary;
+
+      case 'RESOLVED':
+      case 'VERIFIED':
+      case 'CLOSED':
+        return COLORS.success;
+
+      default:
+        return COLORS.danger;
+    }
+  };
 
   return (
-    <View style={[styles.badge, { backgroundColor: badgeColor }]}> 
-      <Text style={styles.badgeText}>{statusLabel}</Text>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: getBadgeColor() },
+        style
+      ]}
+    >
+      <Text style={styles.badgeText}>
+        {statusLabel}
+      </Text>
     </View>
   );
 };
@@ -26,6 +58,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 12,
   },
+
   badgeText: {
     color: '#FFFFFF',
     fontSize: 12,

@@ -1,4 +1,3 @@
-```javascript
 const express = require('express');
 const path = require('path');
 
@@ -13,6 +12,27 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+
+// CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, x-user-id, x-userid'
+  );
+
+  res.header(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, DELETE, OPTIONS'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 app.use(express.json());
 
@@ -60,4 +80,3 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 module.exports = app;
-```

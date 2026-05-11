@@ -1,16 +1,18 @@
 const prisma = require('../prismaClient');
 
-const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
-const { createNotification, notifyRole } = require('../services/notificationService');
+const {
+  findIssueAssignedToWorker
+} = require('../services/assignedIssueService');
 
 const {
-  ALLOWED_STATUSES,
-  isAllowedStatus,
-  isValidStatusTransition,
+  createNotification,
+  notifyRole
+} = require('../services/notificationService');
+
+const {
   normalizeLocation,
-  normalizeStatus,
-  parsePositiveInt,
-  sanitizeText
+  sanitizeText,
+  parsePositiveInt
 } = require('../utils/issueHelpers');
 
 const ALLOWED_CATEGORIES = [
@@ -28,6 +30,7 @@ const ALLOWED_CATEGORIES = [
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_LOCATION_LENGTH = 200;
+
 const MAX_BUILDING_LENGTH = 100;
 const MAX_FLOOR_LENGTH = 50;
 const MAX_ROOM_LENGTH = 50;
@@ -74,6 +77,8 @@ const deriveLocationParts = ({
   };
 };
 
+// GET ALL ISSUES
+
 exports.getAllIssues = async (
   req,
   res
@@ -92,13 +97,16 @@ exports.getAllIssues = async (
       count: issues.length,
       data: issues
     });
+
   } catch (error) {
     res.status(500).json({
-      error: error.message,
-      code: 'FETCH_ERROR'
+      success: false,
+      message: error.message
     });
   }
 };
+
+// GET ISSUE BY ID
 
 exports.getIssueById = async (
   req,
@@ -136,13 +144,16 @@ exports.getIssueById = async (
       success: true,
       data: issue
     });
+
   } catch (error) {
     res.status(500).json({
-      error: error.message,
-      code: 'FETCH_ERROR'
+      success: false,
+      message: error.message
     });
   }
 };
+
+// CREATE ISSUE
 
 exports.createIssue = async (
   req,
@@ -163,7 +174,7 @@ exports.createIssue = async (
     const rawUserId =
       req.userId ?? userId;
 
-    if (rawUserId == null) {
+    if (!rawUserId) {
       return res.status(401).json({
         error:
           'Authentication required',
@@ -192,8 +203,8 @@ exports.createIssue = async (
 
     if (!cleanTitle) {
       return res.status(400).json({
-        error: 'Title is required',
-        code: 'INVALID_TITLE'
+        success: false,
+        message: 'Title is required'
       });
     }
 
@@ -226,6 +237,18 @@ exports.createIssue = async (
           'Description must be 1000 characters or less',
         code:
           'DESCRIPTION_TOO_LONG'
+      });
+    }
+
+    if (
+      !category ||
+      !ALLOWED_CATEGORIES.includes(
+        category
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Invalid category'
       });
     }
 
@@ -390,6 +413,22 @@ exports.createIssue = async (
         }
       );
 
+    await notifyRole({
+      role:
+        'Facility Manager',
+
+      type:
+        'ISSUE_CREATED',
+
+      title:
+        'New issue submitted',
+
+      message:
+        `Issue "${cleanTitle}" was submitted.`,
+
+      issueId: issue.id
+    });
+
     res.status(201).json({
       success: true,
       message:
@@ -398,6 +437,7 @@ exports.createIssue = async (
         ISSUE_REPORT_POINTS,
       data: issue
     });
+
   } catch (error) {
     res.status(500).json({
       error: error.message,

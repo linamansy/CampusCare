@@ -3,13 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id                  Int            @id @default(autoincrement())
+
   name                String
   email               String         @unique
   password            String
@@ -23,25 +23,28 @@ model User {
   isVerified          Boolean        @default(false)
 
   issues              Issue[]
+  comments            Comment[]
   notifications       Notification[]
+
+  verifiedIssues      Issue[]        @relation("IssueVerifier")
 }
 
 model Issue {
-  id                  Int       @id @default(autoincrement())
+  id                  Int            @id @default(autoincrement())
 
-  title               String    @db.VarChar(100)
-  description         String    @db.Text
+  title               String
+  description         String
 
-  status              String    @default("Submitted/Pending")
-  priority            String    @default("Normal")
+  status              String         @default("Submitted/Pending")
+  priority            String         @default("Normal")
 
   category            String
 
-  location            String    @db.VarChar(200)
+  location            String
 
-  building            String    @default("") @db.VarChar(100)
-  floor               String    @default("") @db.VarChar(50)
-  room                String    @default("") @db.VarChar(50)
+  building            String         @default("")
+  floor               String         @default("")
+  room                String         @default("")
 
   image               String?
 
@@ -49,45 +52,53 @@ model Issue {
   completionNote      String?
   rejectionReason     String?
 
-  resolvedAt          DateTime?
-
   userId              Int
   assignedTo          Int?
 
+  resolvedAt          DateTime?
+  verifiedBy          Int?
+
   comments            Comment[]
+  notifications       Notification[]
 
-  user                User      @relation(fields: [userId], references: [id])
+  user                User           @relation(fields: [userId], references: [id])
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  verifier            User?          @relation("IssueVerifier", fields: [verifiedBy], references: [id])
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model Comment {
-  id          Int       @id @default(autoincrement())
+  id                  Int            @id @default(autoincrement())
 
-  text        String
+  text                String
 
-  issueId     Int
+  issueId             Int
+  userId              Int
 
-  issue       Issue     @relation(fields: [issueId], references: [id])
+  issue               Issue          @relation(fields: [issueId], references: [id])
+  user                User           @relation(fields: [userId], references: [id])
 
-  createdAt   DateTime  @default(now())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model Notification {
-  id          Int       @id @default(autoincrement())
+  id                  Int            @id @default(autoincrement())
 
-  userId      Int
+  userId              Int
 
-  type        String
-  title       String
-  message     String
+  type                String
+  title               String
+  message             String
 
-  issueId     Int?
+  issueId             Int?
 
-  isRead      Boolean   @default(false)
+  isRead              Boolean        @default(false)
 
-  createdAt   DateTime  @default(now())
+  user                User           @relation(fields: [userId], references: [id])
+  issue               Issue?         @relation(fields: [issueId], references: [id])
 
-  user        User      @relation(fields: [userId], references: [id])
+  createdAt           DateTime       @default(now())
 }
