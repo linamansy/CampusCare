@@ -135,7 +135,8 @@ exports.register = async (req, res) => {
         name: cleanName,
         email: cleanEmail,
         password: hashedPassword,
-        role: selectedRole
+        role: selectedRole,
+        isVerified: true  // Auto-verify: no OTP step required
       }
     });
 

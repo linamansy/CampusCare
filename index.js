@@ -5,14 +5,14 @@ require('dotenv').config({
   quiet: true
 });
 
-console.log("INDEX RUNNING");
-
 process.chdir(__dirname);
 
 const app = require('./src/app');
 
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Bind to all interfaces so mobile devices on same WiFi can connect
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`CampusCare API running on http://${HOST}:${PORT}`);
+  console.log(`LAN access: http://192.168.8.115:${PORT}`);
 });
