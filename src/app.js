@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 
 const issueRoutes = require('./routes/todoRoutes');
 const managerRoutes = require('./routes/managerRoutes');
@@ -11,6 +12,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
