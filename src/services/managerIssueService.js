@@ -1,6 +1,7 @@
 const prisma = require('../prismaClient');
 
-const allowedFilterFields = ['status', 'category', 'location'];
+const allowedFilterFields = ['status', 'category', 'location', 'building', 'floor', 'room', 'priority'];
+const textFilterFields = ['location', 'building', 'floor', 'room'];
 
 const issueListOptions = (where = {}) => ({
   where,
@@ -11,18 +12,16 @@ const issueListOptions = (where = {}) => ({
   }
 });
 
-const getAllIssues = () => {
-  return prisma.issue.findMany(issueListOptions());
-};
+const getAllIssues = () => prisma.issue.findMany(issueListOptions());
 
 const getFilteredIssues = (filters) => {
   const where = {};
 
-  // Dynamic filters keep one Prisma query path for status/category/location
-  // and avoid touching existing issue or worker routes during merges.
   for (const field of allowedFilterFields) {
     if (filters[field]) {
-      where[field] = filters[field];
+      where[field] = textFilterFields.includes(field)
+        ? { contains: filters[field], mode: 'insensitive' }
+        : filters[field];
     }
   }
 
@@ -32,10 +31,12 @@ const getFilteredIssues = (filters) => {
 const searchIssues = (query) => {
   return prisma.issue.findMany(
     issueListOptions({
-      // Search is isolated to manager routes and checks both manager-facing text fields.
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } }
+        { description: { contains: query, mode: 'insensitive' } },
+        { location: { contains: query, mode: 'insensitive' } },
+        { building: { contains: query, mode: 'insensitive' } },
+        { room: { contains: query, mode: 'insensitive' } }
       ]
     })
   );

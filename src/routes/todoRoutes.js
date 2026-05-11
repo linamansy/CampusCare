@@ -4,20 +4,41 @@ const path = require('path');
 const multer = require('multer');
 
 const router = express.Router();
-const controller = require('../controllers/todoController');
-const { verifyAuth } = require('../middleware/auth');
 
-const workerIssueController = require('../controllers/workerIssueController');
+const controller =
+  require('../controllers/todoController');
 
-const completionPhotoUpload = require('../middleware/completionPhotoUpload');
-const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
+const workerIssueController =
+  require('../controllers/workerIssueController');
 
-const workerAuth = [authenticateToken, requireRole('Worker')];
+const completionPhotoUpload =
+  require('../middleware/completionPhotoUpload');
 
-const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'issues');
+const { verifyAuth } =
+  require('../middleware/auth');
+
+const {
+  authenticateToken,
+  requireRole
+} = require('../middleware/authMiddleware');
+
+const workerAuth = [
+  authenticateToken,
+  requireRole('Worker')
+];
+
+const uploadDir = path.join(
+  __dirname,
+  '..',
+  '..',
+  'uploads',
+  'issues'
+);
 
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  fs.mkdirSync(uploadDir, {
+    recursive: true
+  });
 }
 
 const storage = multer.diskStorage({
@@ -26,8 +47,16 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, '_');
-    cb(null, `${Date.now()}-${safeName}`);
+    const safeName =
+      file.originalname.replace(
+        /\s+/g,
+        '_'
+      );
+
+    cb(
+      null,
+      `${Date.now()}-${safeName}`
+    );
   }
 });
 
@@ -45,23 +74,68 @@ const upload = multer({
       'image/jpg'
     ];
 
-    if (allowed.includes(file.mimetype)) {
+    if (
+      allowed.includes(
+        file.mimetype
+      )
+    ) {
       return cb(null, true);
     }
 
     return cb(
-      new Error('Only PNG and JPG images are allowed')
+      new Error(
+        'Only PNG and JPG images are allowed'
+      )
     );
   }
 });
 
-// Worker route FIRST
-router.get('/assigned', workerAuth, workerIssueController.getAssignedIssues);
+// Worker routes
+
+router.get(
+  '/assigned',
+  workerAuth,
+  workerIssueController.getAssignedIssues
+);
+
+router.put(
+  '/:id/in-progress',
+  workerAuth,
+  workerIssueController.markInProgress
+);
+
+router.put(
+  '/:id/completed',
+  workerAuth,
+  workerIssueController.markCompleted
+);
+
+router.post(
+  '/:id/completion-photo',
+  workerAuth,
+  completionPhotoUpload.single(
+    'completionPhoto'
+  ),
+  workerIssueController.uploadCompletionPhoto
+);
 
 // Issue routes
-router.get('/', controller.getAllIssues);
 
-router.get('/user', controller.getUserIssues);
+router.get(
+  '/',
+  controller.getAllIssues
+);
+
+router.get(
+  '/my',
+  verifyAuth,
+  controller.getMyIssues
+);
+
+router.get(
+  '/user',
+  controller.getUserIssues
+);
 
 router.get(
   '/user/:userId',
@@ -69,14 +143,46 @@ router.get(
   controller.getMyIssues
 );
 
-router.get('/:id', controller.getIssueById);
+router.get(
+  '/:id',
+  controller.getIssueById
+);
 
-// Comments routes
-router.get('/:id/comments', controller.getCommentsByIssue);
+// Notifications
 
-router.post('/:id/comments', controller.createComment);
+router.get(
+  '/notifications',
+  verifyAuth,
+  controller.getUserNotifications
+);
+
+router.put(
+  '/notifications/:id/read',
+  verifyAuth,
+  controller.markNotificationRead
+);
+
+// Comments
+
+router.get(
+  '/:id/comments',
+  controller.getCommentsByIssue
+);
+
+router.post(
+  '/:id/comments',
+  verifyAuth,
+  controller.createComment
+);
+
+router.post(
+  '/comments',
+  workerAuth,
+  controller.createComment
+);
 
 // Create issue
+
 router.post(
   '/',
   verifyAuth,
@@ -84,16 +190,49 @@ router.post(
   controller.createIssue
 );
 
-// Worker actions
-router.put('/:id/in-progress', workerAuth, workerIssueController.markInProgress);
-router.put('/:id/completed', workerAuth, workerIssueController.markCompleted);
-router.put('/:id/status', controller.updateIssueStatus);
-router.post('/comments', workerAuth, controller.createComment);
+// Update issue
+
+router.put(
+  '/:id/status',
+  verifyAuth,
+  controller.updateIssueStatus
+);
+
+router.put(
+  '/:id/assign',
+  verifyAuth,
+  controller.assignWorker
+);
+
+router.put(
+  '/:id/close',
+  verifyAuth,
+  controller.closeIssue
+);
+
+// Upload issue photo
+
 router.post(
-  '/:id/completion-photo',
-  workerAuth,
-  completionPhotoUpload.single('completionPhoto'),
-  workerIssueController.uploadCompletionPhoto
+  '/:id/photo',
+  verifyAuth,
+  upload.single('image'),
+  controller.uploadIssuePhoto
+);
+
+// Verify issue
+
+router.post(
+  '/:id/verify',
+  verifyAuth,
+  controller.verifyResolution
+);
+
+// Delete issue
+
+router.delete(
+  '/:id',
+  verifyAuth,
+  controller.deleteIssue
 );
 
 module.exports = router;
