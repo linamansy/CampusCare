@@ -1,73 +1,260 @@
-const express = require('express');
-const path = require('path');
+const prisma = require('../prismaClient');
 
-const issueRoutes = require('./routes/todoRoutes');
-const managerRoutes = require('./routes/managerRoutes');
-const userRoutes = require('./routes/userRoutes');
-const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const debugRoutes = require('./routes/debugRoutes');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-const app = express();
+const { randomUUID } = require('crypto');
 
-// CORS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+const {
+  revokeToken
+} = require('../utils/tokenRevocationStore');
 
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, x-user-id, x-userid'
+const ACCESS_TOKEN_EXPIRES_IN =
+  process.env.JWT_EXPIRES_IN || '1h';
+
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'campuscare-dev-secret-change-me';
+
+const VALID_ROLES = [
+  'Community Member',
+  'Facility Manager',
+  'Worker'
+];
+
+const UNIVERSITY_EMAIL_DOMAINS = (
+  process.env.UNIVERSITY_EMAIL_DOMAINS ||
+  'giu-uni.de,giu.edu.eg,campuscare.test'
+)
+  .split(',')
+  .map((domain) =>
+    domain.trim().toLowerCase()
+  )
+  .filter(Boolean);
+
+const OTP_EXPIRY_MS =
+  10 * 60 * 1000;
+
+const RESET_TOKEN_EXPIRY_MS =
+  15 * 60 * 1000;
+
+const otpStore = new Map();
+
+const resetTokenStore = new Map();
+
+const sanitizeUser = (user) => {
+  const {
+    password: _password,
+    ...userWithoutPassword
+  } = user;
+
+  return userWithoutPassword;
+};
+
+const cleanEmailValue = (email) =>
+  typeof email === 'string'
+    ? email.trim().toLowerCase()
+    : '';
+
+const isValidEmail = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    email
   );
 
-  res.header(
-    'Access-Control-Allow-Methods',
-    'GET, POST, PUT, DELETE, OPTIONS'
+const isUniversityEmail = (email) => {
+  const domain = email
+    .split('@')[1]
+    ?.toLowerCase();
+
+  return UNIVERSITY_EMAIL_DOMAINS.includes(
+    domain
+  );
+};
+
+const generateOtp = () =>
+  Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+const isHashedPassword = (password) =>
+  /^\$2[aby]\$/.test(password);
+
+const buildTokenPayload = (user) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role
+});
+
+const generateAccessToken = (user) =>
+  jwt.sign(
+    {
+      ...buildTokenPayload(user),
+      jti: randomUUID()
+    },
+    JWT_SECRET,
+    {
+      expiresIn:
+        ACCESS_TOKEN_EXPIRES_IN
+    }
   );
 
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
+const authenticateUser = async (
+  email,
+  password
+) => {
+  const cleanEmail =
+    cleanEmailValue(email);
+
+  if (!cleanEmail || !password) {
+    return null;
   }
 
-  next();
-});
+  const user =
+    await prisma.user.findUnique({
+      where: {
+        email: cleanEmail
+      }
+    });
 
-app.use(express.json());
+  if (!user) {
+    return null;
+  }
 
-// Static uploads
-app.use(
-  '/uploads',
-  express.static(path.join(__dirname, '..', 'uploads'))
-);
+  const passwordMatches =
+    isHashedPassword(user.password)
+      ? await bcrypt.compare(
+          password,
+          user.password
+        )
+      : user.password === password;
 
-// Routes
-app.use('/issues', issueRoutes);
-app.use('/api/issues', issueRoutes);
+  if (!passwordMatches) {
+    return null;
+  }
 
-app.use('/manager', managerRoutes);
-app.use('/api/manager', managerRoutes);
+  if (
+    !isHashedPassword(user.password)
+  ) {
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
 
-app.use('/users', userRoutes);
-app.use('/api/users', userRoutes);
+    await prisma.user.update({
+      where: {
+        id: user.id
+      },
+      data: {
+        password: hashedPassword
+      }
+    });
+  }
 
-app.use('/auth', authRoutes);
-app.use('/api/auth', authRoutes);
+  return sanitizeUser(user);
+};
 
-app.use('/admin', adminRoutes);
-app.use('/api/admin', adminRoutes);
+// REGISTER
+exports.register = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      role
+    } = req.body;
 
-app.use('/debug', debugRoutes);
-app.use('/api/debug', debugRoutes);
+    const cleanName =
+      typeof name === 'string'
+        ? name.trim()
+        : '';
 
-// Root
-app.get('/', (req, res) => {
-  res.send('CampusCare API running');
-});
+    const cleanEmail =
+      cleanEmailValue(email);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok'
-  });
-});
+    const selectedRole =
+      role || 'Community Member';
 
-module.exports = app;
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !password
+    ) {
+      return res.status(400).json({
+        error:
+          'Name, email, and password are required'
+      });
+    }
+
+    if (
+      !isValidEmail(cleanEmail)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid email format'
+      });
+    }
+
+    if (
+      !isUniversityEmail(cleanEmail)
+    ) {
+      return res.status(400).json({
+        error:
+          'Registration requires an official university email address',
+        code:
+          'INVALID_UNIVERSITY_EMAIL'
+      });
+    }
+
+    if (
+      !VALID_ROLES.includes(
+        selectedRole
+      )
+    ) {
+      return res.status(400).json({
+        error: `Role must be one of: ${VALID_ROLES.join(
+          ', '
+        )}`
+      });
+    }
+
+    const existingUser =
+      await prisma.user.findUnique({
+        where: {
+          email: cleanEmail
+        }
+      });
+
+    if (existingUser) {
+      return res.status(409).json({
+        error:
+          'Email already in use'
+      });
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
+
+    const user =
+      await prisma.user.create({
+        data: {
+          name: cleanName,
+          email: cleanEmail,
+          password: hashedPassword,
+          role: selectedRole,
+          isVerified: true
+        }
+      });
+
+    res.status(201).json({
+      message:
+        'Registration successful',
+      user: sanitizeUser(user)
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};

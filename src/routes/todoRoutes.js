@@ -5,11 +5,27 @@ const multer = require('multer');
 
 const router = express.Router();
 
-const controller = require('../controllers/todoController');
+const controller =
+  require('../controllers/todoController');
 
-const { verifyAuth } = require('../middleware/auth');
+const workerIssueController =
+  require('../controllers/workerIssueController');
 
-const workerIssueController = require('../controllers/workerIssueController');
+const completionPhotoUpload =
+  require('../middleware/completionPhotoUpload');
+
+const { verifyAuth } =
+  require('../middleware/auth');
+
+const {
+  authenticateToken,
+  requireRole
+} = require('../middleware/authMiddleware');
+
+const workerAuth = [
+  authenticateToken,
+  requireRole('Worker')
+];
 
 const uploadDir = path.join(
   __dirname,
@@ -32,7 +48,10 @@ const storage = multer.diskStorage({
 
   filename: (req, file, cb) => {
     const safeName =
-      file.originalname.replace(/\s+/g, '_');
+      file.originalname.replace(
+        /\s+/g,
+        '_'
+      );
 
     cb(
       null,
@@ -55,7 +74,11 @@ const upload = multer({
       'image/jpg'
     ];
 
-    if (allowed.includes(file.mimetype)) {
+    if (
+      allowed.includes(
+        file.mimetype
+      )
+    ) {
       return cb(null, true);
     }
 
@@ -68,18 +91,40 @@ const upload = multer({
 });
 
 // Worker routes
+
 router.get(
   '/assigned',
+  workerAuth,
   workerIssueController.getAssignedIssues
 );
 
 router.put(
   '/:id/in-progress',
+  workerAuth,
   workerIssueController.markInProgress
 );
 
-// General issue routes
-router.get('/', controller.getAllIssues);
+router.put(
+  '/:id/completed',
+  workerAuth,
+  workerIssueController.markCompleted
+);
+
+router.post(
+  '/:id/completion-photo',
+  workerAuth,
+  completionPhotoUpload.single(
+    'completionPhoto'
+  ),
+  workerIssueController.uploadCompletionPhoto
+);
+
+// Issue routes
+
+router.get(
+  '/',
+  controller.getAllIssues
+);
 
 router.get(
   '/my',
@@ -88,12 +133,23 @@ router.get(
 );
 
 router.get(
+  '/user',
+  controller.getUserIssues
+);
+
+router.get(
   '/user/:userId',
   verifyAuth,
   controller.getMyIssues
 );
 
+router.get(
+  '/:id',
+  controller.getIssueById
+);
+
 // Notifications
+
 router.get(
   '/notifications',
   verifyAuth,
@@ -107,6 +163,7 @@ router.put(
 );
 
 // Comments
+
 router.get(
   '/:id/comments',
   controller.getCommentsByIssue
@@ -118,10 +175,14 @@ router.post(
   controller.createComment
 );
 
-// Single issue
-router.get('/:id', controller.getIssueById);
+router.post(
+  '/comments',
+  workerAuth,
+  controller.createComment
+);
 
 // Create issue
+
 router.post(
   '/',
   verifyAuth,
@@ -130,6 +191,7 @@ router.post(
 );
 
 // Update issue
+
 router.put(
   '/:id/status',
   verifyAuth,
@@ -149,6 +211,7 @@ router.put(
 );
 
 // Upload issue photo
+
 router.post(
   '/:id/photo',
   verifyAuth,
@@ -157,6 +220,7 @@ router.post(
 );
 
 // Verify issue
+
 router.post(
   '/:id/verify',
   verifyAuth,
@@ -164,6 +228,7 @@ router.post(
 );
 
 // Delete issue
+
 router.delete(
   '/:id',
   verifyAuth,

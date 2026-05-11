@@ -1,10 +1,11 @@
+````md id="r8m2qp"
 # CampusCare Mobile App
 
-React Native Expo application for CampusCare issue management system.
+React Native Expo application for the CampusCare issue management system.
 
 ## Project Structure
 
-```
+```bash
 mobile/
 ├── src/
 │   ├── screens/          # Screen components
@@ -18,105 +19,185 @@ mobile/
 │   └── utils/            # Utility functions
 ├── App.js                # Main app component
 └── package.json          # Dependencies
-```
+````
+
+---
 
 ## Setup Instructions
 
-1. **Install Expo CLI** (if not already installed):
-   ```bash
-   npm install -g @expo/cli
-   ```
+### 1. Navigate to mobile directory
 
-2. **Navigate to mobile directory**:
-   ```bash
-   cd mobile
-   ```
+```bash
+cd mobile
+```
 
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### 2. Install dependencies
 
-4. **Start the development server**:
-   ```bash
-   npm start
-   ```
+```bash
+npm install
+```
 
-5. **Run on device/emulator**:
-   - For Android: `npm run android`
-   - For iOS: `npm run ios`
-   - For web: `npm run web`
+### 3. Start the Expo development server
 
-## Implemented Features (Person 3)
+```bash
+npx expo start
+```
 
-### SubmitIssueScreen
-- ✅ Issue title input with validation (max 100 chars)
-- ✅ Issue description input with validation (max 1000 chars)
-- ✅ Category selection (Plumbing, Electrical, HVAC, Cleaning, Maintenance, Other)
-- ✅ Location input with validation (max 200 chars)
-- ✅ Image upload using Expo Image Picker (optional, max 5MB)
-- ✅ Form validation with error messages
-- ✅ Loading states during submission
-- ✅ Success/error alerts
-- ✅ API integration with backend
+### 4. Run the app
+
+* Android:
+
+  ```bash
+  npm run android
+  ```
+
+* iOS:
+
+  ```bash
+  npm run ios
+  ```
+
+* Web:
+
+  ```bash
+  npm run web
+  ```
+
+* Expo Go:
+  Scan the QR code generated in the terminal.
+
+---
+
+## Features Implemented
+
+### Authentication
+
+* User registration
+* Login/logout
+* OTP verification
+* Password reset
+* Role-based authentication
+
+### Issue Management
+
+* Submit issue
+* Upload issue image
+* Issue status tracking
+* Comments system
+* Worker assignment
+* Completion photo uploads
+
+### Roles Supported
+
+* Community Member
+* Worker
+* Facility Manager
+* Admin
+
+### Worker Features
+
+* Assigned issues
+* Mark issue in progress
+* Upload completion proof
+* Mark issue completed
+
+### Manager Features
+
+* Assign workers
+* Resolve/reject issues
+* Request rework
+* Worker management
+
+---
 
 ## API Integration
 
-The app connects to the backend API at `http://localhost:3000/api`
+Backend base URL:
 
-### Endpoints Used
-- `POST /api/issues` - Submit new issue with optional image
-
-### Response Format
-```json
-{
-  "success": true,
-  "data": { ... },
-  "message": "Success message"
-}
+```txt
+http://localhost:3000/api
 ```
+
+### Main Endpoints
+
+* `POST /api/auth/login`
+* `POST /api/auth/register`
+* `GET /api/issues`
+* `POST /api/issues`
+* `PUT /api/issues/:id/status`
+* `POST /api/issues/:id/completion-photo`
+* `GET /api/manager/issues`
+
+---
 
 ## Shared Components
 
-All components follow the design system:
+* CustomButton
+* CustomInput
+* LoadingSpinner
+* StatusBadge
+* IssueCard
+* ScreenHeader
+* EmptyState
+* ErrorMessage
 
-- **CustomButton**: Primary action buttons
-- **CustomInput**: Form input fields with validation
-- **LoadingSpinner**: Loading indicators
-- **StatusBadge**: Issue status indicators
-- **IssueCard**: Issue display cards
-- **ScreenHeader**: Consistent screen headers
-- **EmptyState**: Empty state displays
-- **ErrorMessage**: Error handling displays
-
-## Color System
-
-Uses the official CampusCare color palette defined in `src/theme/colors.js`
+---
 
 ## Navigation
 
-Currently implements Stack Navigation with room for role-based routing.
+Uses React Navigation with role-based navigation structure.
 
-## Testing
+---
 
-Test the SubmitIssueScreen by:
-1. Filling out all required fields
-2. Selecting a category
-3. Optionally adding a photo
-4. Submitting the form
-5. Verifying success/error handling
+## Technologies Used
 
-## Next Steps
+* React Native
+* Expo
+* React Navigation
+* Axios
+* Context API
+* Node.js Backend
+* Prisma ORM
+* PostgreSQL
 
-Implement remaining screens according to team assignments:
-- Person 1: RegisterScreen, LoginScreen
-- Person 2: Session handling, role-based navigation
-- Person 4: MyIssuesScreen
-- Person 5: IssueDetailScreen
-- Person 6: DashboardScreen
-- Person 7: Assign worker functionality
-- Person 8: Worker screens
+---
 
 ## Backend Requirements
 
-Ensure the backend server is running on `http://localhost:3000` with the API endpoints implemented.
+Ensure backend server is running on:
+
+```txt
+http://localhost:3000
+```
+
+---
+
+## Testing
+
+### Test Authentication
+
+1. Register account
+2. Login
+3. Verify OTP
+4. Reset password
+
+### Test Issue Flow
+
+1. Submit issue
+2. Upload image
+3. Assign worker
+4. Mark in progress
+5. Upload completion photo
+6. Resolve issue
+
+---
+
+## Notes
+
+* Expo SDK 54
+* Uses Prisma with PostgreSQL
+* Supports image uploads
+* Includes role-based access control
+
+```
+```

@@ -8,19 +8,25 @@ datasource db {
 }
 
 model User {
-  id              Int            @id @default(autoincrement())
-  name            String
-  email           String         @unique
-  password        String
-  role            String
-  isActive        Boolean        @default(true)
-  isVerified      Boolean        @default(false)
+  id                  Int            @id @default(autoincrement())
 
-  issues          Issue[]
-  comments        Comment[]
-  notifications   Notification[]
+  name                String
+  email               String         @unique
+  password            String
 
-  verifiedIssues  Issue[]        @relation("IssueVerifier")
+  role                String
+
+  points              Int            @default(0)
+  actsOfServicePoints Int            @default(0)
+
+  isActive            Boolean        @default(true)
+  isVerified          Boolean        @default(false)
+
+  issues              Issue[]
+  comments            Comment[]
+  notifications       Notification[]
+
+  verifiedIssues      Issue[]        @relation("IssueVerifier")
 }
 
 model Issue {
@@ -29,14 +35,22 @@ model Issue {
   title               String
   description         String
 
-  status              String         @default("Open")
+  status              String         @default("Submitted/Pending")
   priority            String         @default("Normal")
 
   category            String
+
   location            String
 
+  building            String         @default("")
+  floor               String         @default("")
+  room                String         @default("")
+
   image               String?
+
   completionPhotoUrl  String?
+  completionNote      String?
+  rejectionReason     String?
 
   userId              Int
   assignedTo          Int?
@@ -56,32 +70,35 @@ model Issue {
 }
 
 model Comment {
-  id          Int       @id @default(autoincrement())
-  text        String
+  id                  Int            @id @default(autoincrement())
 
-  issueId     Int
-  userId      Int
+  text                String
 
-  issue        Issue    @relation(fields: [issueId], references: [id])
-  user         User     @relation(fields: [userId], references: [id])
+  issueId             Int
+  userId              Int
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  issue               Issue          @relation(fields: [issueId], references: [id])
+  user                User           @relation(fields: [userId], references: [id])
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model Notification {
-  id          Int       @id @default(autoincrement())
+  id                  Int            @id @default(autoincrement())
 
-  userId      Int
-  type        String
-  message     String
+  userId              Int
 
-  issueId     Int?
+  type                String
+  title               String
+  message             String
 
-  read        Boolean   @default(false)
+  issueId             Int?
 
-  user        User      @relation(fields: [userId], references: [id])
-  issue       Issue?    @relation(fields: [issueId], references: [id])
+  isRead              Boolean        @default(false)
 
-  createdAt   DateTime  @default(now())
+  user                User           @relation(fields: [userId], references: [id])
+  issue               Issue?         @relation(fields: [issueId], references: [id])
+
+  createdAt           DateTime       @default(now())
 }

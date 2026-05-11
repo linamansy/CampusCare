@@ -1,9 +1,18 @@
 const prisma = require('../prismaClient');
-const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
+
+const {
+  findIssueAssignedToWorker
+} = require('../services/assignedIssueService');
+
+const {
+  createNotification,
+  notifyRole
+} = require('../services/notificationService');
 
 const {
   normalizeLocation,
-  sanitizeText
+  sanitizeText,
+  parsePositiveInt
 } = require('../utils/issueHelpers');
 
 const ALLOWED_CATEGORIES = [
@@ -11,7 +20,10 @@ const ALLOWED_CATEGORIES = [
   'Electrical',
   'HVAC',
   'Cleaning',
+  'Cleanliness',
   'Maintenance',
+  'Infrastructure',
+  'Sustainability',
   'Other'
 ];
 
@@ -19,30 +31,71 @@ const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_LOCATION_LENGTH = 200;
 
-const PRIORITY_HIGH_THRESHOLD = 1;
+const MAX_BUILDING_LENGTH = 100;
+const MAX_FLOOR_LENGTH = 50;
+const MAX_ROOM_LENGTH = 50;
+
+const PRIORITY_HIGH_THRESHOLD = 3;
+const ISSUE_REPORT_POINTS = 10;
 
 const CLOSED_STATUSES = [
   'Resolved',
   'Rejected'
 ];
 
-// GET all issues
-exports.getAllIssues = async (req, res) => {
+const issueInclude = {
+  user: true,
+  comments: true
+};
+
+const deriveLocationParts = ({
+  building,
+  floor,
+  room,
+  location
+}) => {
+  const cleanBuilding =
+    sanitizeText(building);
+
+  const cleanFloor =
+    sanitizeText(floor);
+
+  const cleanRoom =
+    sanitizeText(room);
+
+  const cleanLocation =
+    normalizeLocation(
+      location ||
+        `${cleanBuilding} - Floor ${cleanFloor} - Room ${cleanRoom}`
+    );
+
+  return {
+    cleanBuilding,
+    cleanFloor,
+    cleanRoom,
+    cleanLocation
+  };
+};
+
+// GET ALL ISSUES
+
+exports.getAllIssues = async (
+  req,
+  res
+) => {
   try {
-    const issues = await prisma.issue.findMany({
-      include: {
-        user: true,
-        comments: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const issues =
+      await prisma.issue.findMany({
+        include: issueInclude,
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
 
     res.json({
       success: true,
-      data: issues,
-      message: 'Issues retrieved successfully'
+      count: issues.length,
+      data: issues
     });
 
   } catch (error) {
@@ -53,60 +106,43 @@ exports.getAllIssues = async (req, res) => {
   }
 };
 
-// GET issue by id
-exports.getIssueById = async (req, res) => {
-  try {
-    const parsedId = parseInt(req.params.id, 10);
+// GET ISSUE BY ID
 
-    if (Number.isNaN(parsedId)) {
+exports.getIssueById = async (
+  req,
+  res
+) => {
+  try {
+    const parsedId =
+      parsePositiveInt(
+        req.params.id
+      );
+
+    if (!parsedId) {
       return res.status(400).json({
-        success: false,
-        message: 'Valid issue ID required'
+        error:
+          'Valid issue ID required',
+        code: 'INVALID_ID'
       });
     }
 
-    const issue = await prisma.issue.findUnique({
-      where: { id: parsedId },
-
-      include: {
-        user: true,
-
-        comments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                role: true
-              }
-            }
-          },
-
-          orderBy: {
-            createdAt: 'asc'
-          }
+    const issue =
+      await prisma.issue.findUnique({
+        where: {
+          id: parsedId
         },
-
-        verifier: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
+        include: issueInclude
+      });
 
     if (!issue) {
       return res.status(404).json({
-        success: false,
-        message: 'Issue not found'
+        error: 'Issue not found'
       });
     }
 
     res.json({
       success: true,
-      data: issue,
-      message: 'Issue retrieved successfully'
+      data: issue
     });
 
   } catch (error) {
@@ -117,76 +153,53 @@ exports.getIssueById = async (req, res) => {
   }
 };
 
-// GET my issues
-exports.getMyIssues = async (req, res) => {
-  try {
-    const userId = req.userId;
+// CREATE ISSUE
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    const issues = await prisma.issue.findMany({
-      where: {
-        userId
-      },
-
-      include: {
-        comments: true
-      },
-
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    res.json({
-      success: true,
-      data: issues,
-      message: 'Issues retrieved successfully'
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// CREATE issue
-exports.createIssue = async (req, res) => {
+exports.createIssue = async (
+  req,
+  res
+) => {
   try {
     const {
       title,
       description,
       category,
       location,
+      building,
+      floor,
+      room,
       userId
     } = req.body;
 
-    const rawUserId = req.userId ?? userId;
+    const rawUserId =
+      req.userId ?? userId;
 
     if (!rawUserId) {
       return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
+        error:
+          'Authentication required',
+        code: 'NO_AUTH'
       });
     }
 
-    const parsedUserId = parseInt(rawUserId, 10);
+    const parsedUserId =
+      parsePositiveInt(
+        rawUserId
+      );
 
-    if (Number.isNaN(parsedUserId)) {
+    if (!parsedUserId) {
       return res.status(400).json({
-        success: false,
-        message: 'Invalid user ID'
+        error:
+          'Valid userId required',
+        code: 'INVALID_USER'
       });
     }
 
-    const cleanTitle = sanitizeText(title);
+    const cleanTitle =
+      sanitizeText(title);
+
+    const cleanDescription =
+      sanitizeText(description);
 
     if (!cleanTitle) {
       return res.status(400).json({
@@ -195,209 +208,240 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    if (cleanTitle.length > MAX_TITLE_LENGTH) {
+    if (
+      cleanTitle.length >
+      MAX_TITLE_LENGTH
+    ) {
       return res.status(400).json({
-        success: false,
-        message: 'Title too long'
+        error:
+          'Title must be 100 characters or less',
+        code: 'TITLE_TOO_LONG'
       });
     }
-
-    const cleanDescription = sanitizeText(description);
 
     if (!cleanDescription) {
       return res.status(400).json({
-        success: false,
-        message: 'Description is required'
+        error:
+          'Description is required',
+        code:
+          'INVALID_DESCRIPTION'
       });
     }
 
-    if (cleanDescription.length > MAX_DESCRIPTION_LENGTH) {
+    if (
+      cleanDescription.length >
+      MAX_DESCRIPTION_LENGTH
+    ) {
       return res.status(400).json({
-        success: false,
-        message: 'Description too long'
+        error:
+          'Description must be 1000 characters or less',
+        code:
+          'DESCRIPTION_TOO_LONG'
       });
     }
 
     if (
       !category ||
-      !ALLOWED_CATEGORIES.includes(category)
+      !ALLOWED_CATEGORIES.includes(
+        category
+      )
     ) {
       return res.status(400).json({
-        success: false,
-        message: 'Invalid category'
+        error:
+          'Invalid category'
       });
     }
 
-    const cleanLocation = normalizeLocation(location);
+    const {
+      cleanBuilding,
+      cleanFloor,
+      cleanRoom,
+      cleanLocation
+    } = deriveLocationParts({
+      building,
+      floor,
+      room,
+      location
+    });
+
+    if (
+      !cleanBuilding ||
+      !cleanFloor ||
+      !cleanRoom
+    ) {
+      return res.status(400).json({
+        error:
+          'Building, floor, and room are required',
+        code:
+          'INVALID_LOCATION_PARTS'
+      });
+    }
+
+    if (
+      cleanBuilding.length >
+        MAX_BUILDING_LENGTH ||
+      cleanFloor.length >
+        MAX_FLOOR_LENGTH ||
+      cleanRoom.length >
+        MAX_ROOM_LENGTH
+    ) {
+      return res.status(400).json({
+        error:
+          'Building, floor, or room is too long',
+        code:
+          'LOCATION_PART_TOO_LONG'
+      });
+    }
 
     if (!cleanLocation) {
       return res.status(400).json({
-        success: false,
-        message: 'Location is required'
+        error:
+          'Location is required',
+        code:
+          'INVALID_LOCATION'
       });
     }
 
-    if (cleanLocation.length > MAX_LOCATION_LENGTH) {
+    if (
+      cleanLocation.length >
+      MAX_LOCATION_LENGTH
+    ) {
       return res.status(400).json({
-        success: false,
-        message: 'Location too long'
+        error:
+          'Location must be 200 characters or less',
+        code:
+          'LOCATION_TOO_LONG'
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: parsedUserId
-      }
-    });
+    if (!req.file) {
+      return res.status(400).json({
+        error:
+          'Issue photo is required',
+        code: 'IMAGE_REQUIRED'
+      });
+    }
+
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          id: parsedUserId
+        }
+      });
 
     if (!user) {
       return res.status(404).json({
-        success: false,
-        message: 'User not found'
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
       });
     }
-
-    const imagePath = req.file
-      ? `/uploads/issues/${req.file.filename}`
-      : null;
 
     const similarIssueCount =
       await prisma.issue.count({
         where: {
-          location: {
-            equals: cleanLocation,
-            mode: 'insensitive'
+          building: {
+            equals:
+              cleanBuilding,
+            mode:
+              'insensitive'
           },
-
+          floor: {
+            equals: cleanFloor,
+            mode:
+              'insensitive'
+          },
+          room: {
+            equals: cleanRoom,
+            mode:
+              'insensitive'
+          },
           status: {
-            notIn: CLOSED_STATUSES
+            notIn:
+              CLOSED_STATUSES
           }
         }
       });
 
     const priority =
-      similarIssueCount >= PRIORITY_HIGH_THRESHOLD
+      similarIssueCount + 1 >=
+      PRIORITY_HIGH_THRESHOLD
         ? 'High'
         : 'Normal';
 
-    const issue = await prisma.issue.create({
-      data: {
-        title: cleanTitle,
-        description: cleanDescription,
-        category,
-        location: cleanLocation,
-        image: imagePath,
-        priority,
-        status: 'Submitted/Pending',
-        userId: parsedUserId
-      }
-    });
+    const imagePath =
+      `/uploads/issues/${req.file.filename}`;
 
-    const managers = await prisma.user.findMany({
-      where: {
-        role: 'Facility Manager'
-      }
-    });
+    const issue =
+      await prisma.$transaction(
+        async (tx) => {
+          const createdIssue =
+            await tx.issue.create({
+              data: {
+                title: cleanTitle,
+                description:
+                  cleanDescription,
+                category,
+                location:
+                  cleanLocation,
+                building:
+                  cleanBuilding,
+                floor: cleanFloor,
+                room: cleanRoom,
+                image: imagePath,
+                status:
+                  'Submitted/Pending',
+                priority,
+                userId:
+                  parsedUserId
+              }
+            });
 
-    for (const manager of managers) {
-      await prisma.notification.create({
-        data: {
-          userId: manager.id,
-          type: 'issue_created',
-          message: `New issue submitted: "${issue.title}"`,
-          issueId: issue.id
+          await tx.user.update({
+            where: {
+              id: parsedUserId
+            },
+            data: {
+              actsOfServicePoints:
+                {
+                  increment:
+                    ISSUE_REPORT_POINTS
+                }
+            }
+          });
+
+          return createdIssue;
         }
-      });
-    }
+      );
+
+    await notifyRole({
+      role:
+        'Facility Manager',
+
+      type:
+        'ISSUE_CREATED',
+
+      title:
+        'New issue submitted',
+
+      message:
+        `Issue "${cleanTitle}" was submitted.`,
+
+      issueId: issue.id
+    });
 
     res.status(201).json({
       success: true,
-      data: issue,
-      message: 'Issue created successfully'
+      message:
+        'Issue created successfully',
+      pointsAwarded:
+        ISSUE_REPORT_POINTS,
+      data: issue
     });
 
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// UPDATE issue status
-exports.updateIssueStatus = async (req, res) => {
-  try {
-    const issueId = parseInt(req.params.id, 10);
-
-    const { status } = req.body;
-
-    const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    if (Number.isNaN(issueId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid issue ID'
-      });
-    }
-
-    const validStatuses = [
-      'Open',
-      'In_Progress',
-      'Resolved',
-      'Verified'
-    ];
-
-    if (
-      !status ||
-      !validStatuses.includes(status)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status'
-      });
-    }
-
-    const issue = await prisma.issue.findUnique({
-      where: {
-        id: issueId
-      }
-    });
-
-    if (!issue) {
-      return res.status(404).json({
-        success: false,
-        message: 'Issue not found'
-      });
-    }
-
-    const updatedIssue =
-      await prisma.issue.update({
-        where: {
-          id: issueId
-        },
-
-        data: {
-          status
-        }
-      });
-
-    res.json({
-      success: true,
-      data: updatedIssue,
-      message: 'Issue status updated successfully'
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
+      error: error.message,
+      code: 'INTERNAL_ERROR'
     });
   }
 };

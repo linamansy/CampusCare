@@ -1,34 +1,54 @@
+# Dependencies
 node_modules/
+
+# Expo
 .expo/
 .expo-shared/
+dist/
 web-build/
+expo-env.d.ts
+
+# Native folders
+/android
+/ios
+
+# Android / iOS keys
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Kotlin
+.kotlin/
+
+# Metro
+.metro-health-check*
+
+# Logs
 *.log
+npm-debug.*
+npm-debug.log*
+yarn-debug.*
+yarn-debug.log*
+yarn-error.*
+yarn-error.log*
+
+# Temp files
 *.tmp
+*.cache
+
+# macOS
 .DS_Store
+*.DS_Store
+
+# Environment files
 .env
+.env*.local
 */.env
 
-# Expo files
-.expo/
-.expo-shared/
-
-# Android
-android/
-
-# iOS
-ios/
-
-# misc
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-
-# Expo Metro cache
-.expo/
-
-# Mac
-*.DS_Store
+# TypeScript
+*.tsbuildinfo
 
 # VS Code
 .vscode/
@@ -36,8 +56,14 @@ package-lock.json
 # JetBrains
 .idea/
 
-# build artifacts
-*.cache
+# Certificates
+*.pem
 
-# service worker
+# Git merge backups
+*.orig.*
+
+# Service worker
 service-worker.js
+
+# Misc
+app-example
