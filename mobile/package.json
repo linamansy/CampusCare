@@ -1,3 +1,4 @@
+```json id="m7q2xp"
 {
   "name": "campuscare-mobile",
   "version": "1.0.0",
@@ -58,3 +59,4 @@
     "typescript": "~5.9.2"
   }
 }
+```
