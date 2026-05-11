@@ -1,3 +1,4 @@
+```javascript
 const express = require('express');
 const path = require('path');
 
@@ -9,25 +10,39 @@ const adminRoutes = require('./routes/adminRoutes');
 const debugRoutes = require('./routes/debugRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
+const errorHandler = require('./middleware/errorHandler');
+
 const app = express();
 
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-// Keep both legacy and API-prefixed routes for compatibility during the merge.
+// Static uploads
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '..', 'uploads'))
+);
+
+// Routes
 app.use('/issues', issueRoutes);
 app.use('/api/issues', issueRoutes);
+
 app.use('/manager', managerRoutes);
 app.use('/api/manager', managerRoutes);
+
 app.use('/users', userRoutes);
 app.use('/api/users', userRoutes);
+
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
+
 app.use('/admin', adminRoutes);
 app.use('/api/admin', adminRoutes);
+
 app.use('/notifications', notificationRoutes);
 app.use('/api/notifications', notificationRoutes);
+
 app.use('/debug', debugRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Root
 app.get('/', (req, res) => {
@@ -36,8 +51,13 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({
+    status: 'ok'
+  });
 });
 
-module.exports = app;
+// Error handler
+app.use(errorHandler);
 
+module.exports = app;
+```
