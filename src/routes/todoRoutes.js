@@ -1,3 +1,4 @@
+```javascript id="h8k2qm"
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -7,18 +8,19 @@ const router = express.Router();
 
 const controller = require('../controllers/todoController');
 
-const workerIssueController = require('../controllers/workerIssueController');
+const workerIssueController =
+  require('../controllers/workerIssueController');
 
-const { verifyAuth } = require('../middleware/auth');
+const completionPhotoUpload =
+  require('../middleware/completionPhotoUpload');
+
+const { verifyAuth } =
+  require('../middleware/auth');
 
 const {
   authenticateToken,
   requireRole
 } = require('../middleware/authMiddleware');
-
-const completionPhotoUpload = require(
-  '../middleware/completionPhotoUpload'
-);
 
 const workerAuth = [
   authenticateToken,
@@ -46,7 +48,10 @@ const storage = multer.diskStorage({
 
   filename: (req, file, cb) => {
     const safeName =
-      file.originalname.replace(/\s+/g, '_');
+      file.originalname.replace(
+        /\s+/g,
+        '_'
+      );
 
     cb(
       null,
@@ -69,7 +74,11 @@ const upload = multer({
       'image/jpg'
     ];
 
-    if (allowed.includes(file.mimetype)) {
+    if (
+      allowed.includes(
+        file.mimetype
+      )
+    ) {
       return cb(null, true);
     }
 
@@ -82,6 +91,7 @@ const upload = multer({
 });
 
 // Worker routes
+
 router.get(
   '/assigned',
   workerAuth,
@@ -110,6 +120,7 @@ router.post(
 );
 
 // Issue routes
+
 router.get(
   '/',
   controller.getAllIssues
@@ -132,6 +143,7 @@ router.get(
 );
 
 // Comments
+
 router.get(
   '/:id/comments',
   controller.getCommentsByIssue
@@ -149,6 +161,7 @@ router.post(
 );
 
 // Create issue
+
 router.post(
   '/',
   verifyAuth,
@@ -157,9 +170,11 @@ router.post(
 );
 
 // Update status
+
 router.put(
   '/:id/status',
   controller.updateIssueStatus
 );
 
 module.exports = router;
+```

@@ -1,0 +1,25 @@
+-- Align data model with SRS user stories: structured location, points, notes, notifications.
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "actsOfServicePoints" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "building" VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "floor" VARCHAR(50) NOT NULL DEFAULT '';
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "room" VARCHAR(50) NOT NULL DEFAULT '';
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "completionNote" TEXT;
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "rejectionReason" TEXT;
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS "resolvedAt" TIMESTAMP(3);
+
+ALTER TABLE "Comment" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS "Notification" (
+  "id" SERIAL PRIMARY KEY,
+  "userId" INTEGER NOT NULL,
+  "type" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "message" TEXT NOT NULL,
+  "issueId" INTEGER,
+  "isRead" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "Notification_userId_isRead_createdAt_idx" ON "Notification"("userId", "isRead", "createdAt");

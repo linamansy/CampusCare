@@ -1,3 +1,4 @@
+```javascript id="u9k2qm"
 const prisma = require('../prismaClient');
 
 const bcrypt = require('bcryptjs');
@@ -24,6 +25,7 @@ exports.getAllUsers = async (
           email: true,
           role: true,
           points: true,
+          actsOfServicePoints: true,
           isActive: true,
           isVerified: true
         }
@@ -126,17 +128,15 @@ exports.createUser = async (
         data: {
           name: cleanName,
           email: cleanEmail,
-
           password:
             hashedPassword,
-
           role: cleanRole,
 
           points: 0,
+          actsOfServicePoints: 0,
 
           isActive: true,
-
-          isVerified: false
+          isVerified: true
         }
       });
 
@@ -153,3 +153,4 @@ exports.createUser = async (
     next(error);
   }
 };
+```

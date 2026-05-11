@@ -9,43 +9,49 @@ datasource db {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
+  id                  Int            @id @default(autoincrement())
+  name                String
+  email               String         @unique
+  password            String
 
-  name          String
-  email         String    @unique
-  password      String
+  role                String
 
-  role          String
+  points              Int            @default(0)
+  actsOfServicePoints Int            @default(0)
 
-  points        Int       @default(0)
+  isActive            Boolean        @default(true)
+  isVerified          Boolean        @default(false)
 
-  isActive      Boolean   @default(true)
-  isVerified    Boolean   @default(false)
-
-  issues        Issue[]
+  issues              Issue[]
+  notifications       Notification[]
 }
 
 model Issue {
   id                  Int       @id @default(autoincrement())
 
   title               String    @db.VarChar(100)
-
   description         String    @db.Text
 
   status              String    @default("Submitted/Pending")
-
   priority            String    @default("Normal")
 
   category            String
 
   location            String    @db.VarChar(200)
 
+  building            String    @default("") @db.VarChar(100)
+  floor               String    @default("") @db.VarChar(50)
+  room                String    @default("") @db.VarChar(50)
+
   image               String?
 
   completionPhotoUrl  String?
+  completionNote      String?
+  rejectionReason     String?
+
+  resolvedAt          DateTime?
 
   userId              Int
-
   assignedTo          Int?
 
   comments            Comment[]
@@ -53,7 +59,6 @@ model Issue {
   user                User      @relation(fields: [userId], references: [id])
 
   createdAt           DateTime  @default(now())
-
   updatedAt           DateTime  @updatedAt
 }
 
@@ -65,4 +70,24 @@ model Comment {
   issueId     Int
 
   issue       Issue     @relation(fields: [issueId], references: [id])
+
+  createdAt   DateTime  @default(now())
+}
+
+model Notification {
+  id          Int       @id @default(autoincrement())
+
+  userId      Int
+
+  type        String
+  title       String
+  message     String
+
+  issueId     Int?
+
+  isRead      Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
 }

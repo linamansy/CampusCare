@@ -1,3 +1,4 @@
+```javascript id="n2k7qp"
 const express = require('express');
 
 const router = express.Router();
@@ -7,6 +8,17 @@ const authController = require('../controllers/authController');
 const {
   authLimiter
 } = require('../middleware/rateLimiter');
+
+const {
+  verifyAuth
+} = require('../middleware/auth');
+
+// Current user
+router.get(
+  '/me',
+  verifyAuth,
+  authController.me
+);
 
 // Authentication
 router.post(
@@ -53,3 +65,4 @@ router.post(
 );
 
 module.exports = router;
+```

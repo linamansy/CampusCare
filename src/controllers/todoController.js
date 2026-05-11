@@ -1,185 +1,407 @@
 const prisma = require('../prismaClient');
 
-const bcrypt = require('bcryptjs');
+const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
+const { createNotification, notifyRole } = require('../services/notificationService');
 
-const jwt = require('jsonwebtoken');
+const {
+  ALLOWED_STATUSES,
+  isAllowedStatus,
+  isValidStatusTransition,
+  normalizeLocation,
+  normalizeStatus,
+  parsePositiveInt,
+  sanitizeText
+} = require('../utils/issueHelpers');
 
-const crypto = require('crypto');
-
-const { randomUUID } = require('crypto');
-
-const { revokeToken } = require('../utils/tokenRevocationStore');
-
-const ACCESS_TOKEN_EXPIRES_IN =
-  process.env.JWT_EXPIRES_IN || '1h';
-
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  'campuscare-dev-secret-change-me';
-
-const VALID_ROLES = [
-  'Community Member',
-  'Facility Manager',
-  'Worker'
+const ALLOWED_CATEGORIES = [
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Cleaning',
+  'Cleanliness',
+  'Maintenance',
+  'Infrastructure',
+  'Sustainability',
+  'Other'
 ];
 
-const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const MAX_TITLE_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_LOCATION_LENGTH = 200;
+const MAX_BUILDING_LENGTH = 100;
+const MAX_FLOOR_LENGTH = 50;
+const MAX_ROOM_LENGTH = 50;
 
-const RESET_TOKEN_EXPIRY_MS =
-  15 * 60 * 1000;
+const PRIORITY_HIGH_THRESHOLD = 3;
+const ISSUE_REPORT_POINTS = 10;
 
-const otpStore = new Map();
+const CLOSED_STATUSES = [
+  'Resolved',
+  'Rejected'
+];
 
-const resetTokenStore = new Map();
-
-const sanitizeUser = (user) => {
-  const {
-    password: _password,
-    ...userWithoutPassword
-  } = user;
-
-  return userWithoutPassword;
+const issueInclude = {
+  user: true,
+  comments: true
 };
 
-const cleanEmailValue = (email) =>
-  typeof email === 'string'
-    ? email.trim().toLowerCase()
-    : '';
+const deriveLocationParts = ({
+  building,
+  floor,
+  room,
+  location
+}) => {
+  const cleanBuilding =
+    sanitizeText(building);
 
-const isValidEmail = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const cleanFloor =
+    sanitizeText(floor);
 
-const generateOtp = () =>
-  Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
+  const cleanRoom =
+    sanitizeText(room);
 
-const isHashedPassword = (password) =>
-  /^\$2[aby]\$/.test(password);
+  const cleanLocation =
+    normalizeLocation(
+      location ||
+        `${cleanBuilding} - Floor ${cleanFloor} - Room ${cleanRoom}`
+    );
 
-const buildTokenPayload = (user) => ({
-  id: user.id,
-  email: user.email,
-  role: user.role
-});
+  return {
+    cleanBuilding,
+    cleanFloor,
+    cleanRoom,
+    cleanLocation
+  };
+};
 
-const generateAccessToken = (user) =>
-  jwt.sign(
-    {
-      ...buildTokenPayload(user),
-      jti: randomUUID()
-    },
-    JWT_SECRET,
-    {
-      expiresIn: ACCESS_TOKEN_EXPIRES_IN
-    }
-  );
-
-const authenticateUser = async (
-  email,
-  password
+exports.getAllIssues = async (
+  req,
+  res
 ) => {
-  const cleanEmail =
-    cleanEmailValue(email);
-
-  if (!cleanEmail || !password) {
-    return null;
-  }
-
-  const user = await prisma.user.findUnique({
-    where: {
-      email: cleanEmail
-    }
-  });
-
-  if (!user) {
-    return null;
-  }
-
-  const passwordMatches =
-    isHashedPassword(user.password)
-      ? await bcrypt.compare(
-          password,
-          user.password
-        )
-      : user.password === password;
-
-  if (!passwordMatches) {
-    return null;
-  }
-
-  if (!isHashedPassword(user.password)) {
-    const hashedPassword =
-      await bcrypt.hash(password, 10);
-
-    await prisma.user.update({
-      where: {
-        id: user.id
-      },
-
-      data: {
-        password: hashedPassword
-      }
-    });
-  }
-
-  return sanitizeUser(user);
-};
-
-// REGISTER
-exports.register = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      role
-    } = req.body;
-
-    const cleanName =
-      typeof name === 'string'
-        ? name.trim()
-        : '';
-
-    const cleanEmail =
-      cleanEmailValue(email);
-
-    const selectedRole =
-      role || 'Community Member';
-
-    if (
-      !cleanName ||
-      !cleanEmail ||
-      !password
-    ) {
-      return res.status(400).json({
-        error:
-          'Name, email, and password are required'
-      });
-    }
-
-    if (!isValidEmail(cleanEmail)) {
-      return res.status(400).json({
-        error: 'Invalid email format'
-      });
-    }
-
-    if (
-      !VALID_ROLES.includes(selectedRole)
-    ) {
-      return res.status(400).json({
-        error: `Role must be one of: ${VALID_ROLES.join(
-          ', '
-        )}`
-      });
-    }
-
-    const existingUser =
-      await prisma.user.findUnique({
-        where: {
-          email: cleanEmail
+    const issues =
+      await prisma.issue.findMany({
+        include: issueInclude,
+        orderBy: {
+          createdAt: 'desc'
         }
       });
 
-    if (existingUser) {
-      return res.status(
+    res.json({
+      success: true,
+      count: issues.length,
+      data: issues
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
+  }
+};
+
+exports.getIssueById = async (
+  req,
+  res
+) => {
+  try {
+    const parsedId =
+      parsePositiveInt(
+        req.params.id
+      );
+
+    if (!parsedId) {
+      return res.status(400).json({
+        error:
+          'Valid issue ID required',
+        code: 'INVALID_ID'
+      });
+    }
+
+    const issue =
+      await prisma.issue.findUnique({
+        where: {
+          id: parsedId
+        },
+        include: issueInclude
+      });
+
+    if (!issue) {
+      return res.status(404).json({
+        error: 'Issue not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: issue
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      code: 'FETCH_ERROR'
+    });
+  }
+};
+
+exports.createIssue = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      location,
+      building,
+      floor,
+      room,
+      userId
+    } = req.body;
+
+    const rawUserId =
+      req.userId ?? userId;
+
+    if (rawUserId == null) {
+      return res.status(401).json({
+        error:
+          'Authentication required',
+        code: 'NO_AUTH'
+      });
+    }
+
+    const parsedUserId =
+      parsePositiveInt(
+        rawUserId
+      );
+
+    if (!parsedUserId) {
+      return res.status(400).json({
+        error:
+          'Valid userId required',
+        code: 'INVALID_USER'
+      });
+    }
+
+    const cleanTitle =
+      sanitizeText(title);
+
+    const cleanDescription =
+      sanitizeText(description);
+
+    if (!cleanTitle) {
+      return res.status(400).json({
+        error: 'Title is required',
+        code: 'INVALID_TITLE'
+      });
+    }
+
+    if (
+      cleanTitle.length >
+      MAX_TITLE_LENGTH
+    ) {
+      return res.status(400).json({
+        error:
+          'Title must be 100 characters or less',
+        code: 'TITLE_TOO_LONG'
+      });
+    }
+
+    if (!cleanDescription) {
+      return res.status(400).json({
+        error:
+          'Description is required',
+        code:
+          'INVALID_DESCRIPTION'
+      });
+    }
+
+    if (
+      cleanDescription.length >
+      MAX_DESCRIPTION_LENGTH
+    ) {
+      return res.status(400).json({
+        error:
+          'Description must be 1000 characters or less',
+        code:
+          'DESCRIPTION_TOO_LONG'
+      });
+    }
+
+    const {
+      cleanBuilding,
+      cleanFloor,
+      cleanRoom,
+      cleanLocation
+    } = deriveLocationParts({
+      building,
+      floor,
+      room,
+      location
+    });
+
+    if (
+      !cleanBuilding ||
+      !cleanFloor ||
+      !cleanRoom
+    ) {
+      return res.status(400).json({
+        error:
+          'Building, floor, and room are required',
+        code:
+          'INVALID_LOCATION_PARTS'
+      });
+    }
+
+    if (
+      cleanBuilding.length >
+        MAX_BUILDING_LENGTH ||
+      cleanFloor.length >
+        MAX_FLOOR_LENGTH ||
+      cleanRoom.length >
+        MAX_ROOM_LENGTH
+    ) {
+      return res.status(400).json({
+        error:
+          'Building, floor, or room is too long',
+        code:
+          'LOCATION_PART_TOO_LONG'
+      });
+    }
+
+    if (!cleanLocation) {
+      return res.status(400).json({
+        error:
+          'Location is required',
+        code:
+          'INVALID_LOCATION'
+      });
+    }
+
+    if (
+      cleanLocation.length >
+      MAX_LOCATION_LENGTH
+    ) {
+      return res.status(400).json({
+        error:
+          'Location must be 200 characters or less',
+        code:
+          'LOCATION_TOO_LONG'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        error:
+          'Issue photo is required',
+        code: 'IMAGE_REQUIRED'
+      });
+    }
+
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          id: parsedUserId
+        }
+      });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    const similarIssueCount =
+      await prisma.issue.count({
+        where: {
+          building: {
+            equals:
+              cleanBuilding,
+            mode:
+              'insensitive'
+          },
+          floor: {
+            equals: cleanFloor,
+            mode:
+              'insensitive'
+          },
+          room: {
+            equals: cleanRoom,
+            mode:
+              'insensitive'
+          },
+          status: {
+            notIn:
+              CLOSED_STATUSES
+          }
+        }
+      });
+
+    const priority =
+      similarIssueCount + 1 >=
+      PRIORITY_HIGH_THRESHOLD
+        ? 'High'
+        : 'Normal';
+
+    const imagePath =
+      `/uploads/issues/${req.file.filename}`;
+
+    const issue =
+      await prisma.$transaction(
+        async (tx) => {
+          const createdIssue =
+            await tx.issue.create({
+              data: {
+                title: cleanTitle,
+                description:
+                  cleanDescription,
+                category,
+                location:
+                  cleanLocation,
+                building:
+                  cleanBuilding,
+                floor: cleanFloor,
+                room: cleanRoom,
+                image: imagePath,
+                status:
+                  'Submitted/Pending',
+                priority,
+                userId:
+                  parsedUserId
+              }
+            });
+
+          await tx.user.update({
+            where: {
+              id: parsedUserId
+            },
+            data: {
+              actsOfServicePoints:
+                {
+                  increment:
+                    ISSUE_REPORT_POINTS
+                }
+            }
+          });
+
+          return createdIssue;
+        }
+      );
+
+    res.status(201).json({
+      success: true,
+      message:
+        'Issue created successfully',
+      pointsAwarded:
+        ISSUE_REPORT_POINTS,
+      data: issue
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};

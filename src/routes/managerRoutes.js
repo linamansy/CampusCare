@@ -1,3 +1,4 @@
+```javascript id="x7m2qp"
 const express = require('express');
 
 const router = express.Router();
@@ -8,9 +9,8 @@ const {
 
 const managerController = require('../controllers/managerController');
 
-const todoController = require('../controllers/todoController');
+// Manager routes require Facility Manager or Admin role
 
-// Manager issue routes
 router.get(
   '/issues',
   requireManagerOrAdmin(),
@@ -29,18 +29,54 @@ router.get(
   managerController.searchManagerIssues
 );
 
-// Update issue status
+router.put(
+  '/issues/:id/assign',
+  requireManagerOrAdmin(),
+  managerController.assignIssue
+);
+
+router.put(
+  '/issues/:id/priority',
+  requireManagerOrAdmin(),
+  managerController.updateIssuePriority
+);
+
 router.put(
   '/issues/:id/status',
   requireManagerOrAdmin(),
-  todoController.updateIssueStatus
+  managerController.updateIssueStatus
 );
 
-// Worker management
+router.put(
+  '/issues/:id/resolve',
+  requireManagerOrAdmin(),
+  managerController.resolveIssue
+);
+
+router.put(
+  '/issues/:id/reject',
+  requireManagerOrAdmin(),
+  managerController.rejectIssue
+);
+
+router.put(
+  '/issues/:id/rework',
+  requireManagerOrAdmin(),
+  managerController.requestRework
+);
+
+// Worker management endpoints
+
 router.get(
   '/workers',
   requireManagerOrAdmin(),
   managerController.getWorkers
+);
+
+router.get(
+  '/workers/:id',
+  requireManagerOrAdmin(),
+  managerController.getWorkerProfile
 );
 
 router.put(
@@ -56,3 +92,4 @@ router.put(
 );
 
 module.exports = router;
+```

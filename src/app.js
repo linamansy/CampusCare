@@ -1,3 +1,4 @@
+```javascript
 const express = require('express');
 const path = require('path');
 
@@ -7,6 +8,7 @@ const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const debugRoutes = require('./routes/debugRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const errorHandler = require('./middleware/errorHandler');
 
@@ -36,6 +38,9 @@ app.use('/api/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/admin', adminRoutes);
 
+app.use('/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 app.use('/debug', debugRoutes);
 app.use('/api/debug', debugRoutes);
 
@@ -55,3 +60,4 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 module.exports = app;
+```

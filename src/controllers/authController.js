@@ -1,14 +1,15 @@
+```javascript id="m8o4qt"
 const prisma = require('../prismaClient');
 
 const bcrypt = require('bcryptjs');
-
 const jwt = require('jsonwebtoken');
-
 const crypto = require('crypto');
 
 const { randomUUID } = require('crypto');
 
-const { revokeToken } = require('../utils/tokenRevocationStore');
+const {
+  revokeToken
+} = require('../utils/tokenRevocationStore');
 
 const ACCESS_TOKEN_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || '1h';
@@ -23,7 +24,18 @@ const VALID_ROLES = [
   'Worker'
 ];
 
-const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const UNIVERSITY_EMAIL_DOMAINS = (
+  process.env.UNIVERSITY_EMAIL_DOMAINS ||
+  'giu-uni.de,giu.edu.eg,campuscare.test'
+)
+  .split(',')
+  .map((domain) =>
+    domain.trim().toLowerCase()
+  )
+  .filter(Boolean);
+
+const OTP_EXPIRY_MS =
+  10 * 60 * 1000;
 
 const RESET_TOKEN_EXPIRY_MS =
   15 * 60 * 1000;
@@ -47,7 +59,19 @@ const cleanEmailValue = (email) =>
     : '';
 
 const isValidEmail = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    email
+  );
+
+const isUniversityEmail = (email) => {
+  const domain = email
+    .split('@')[1]
+    ?.toLowerCase();
+
+  return UNIVERSITY_EMAIL_DOMAINS.includes(
+    domain
+  );
+};
 
 const generateOtp = () =>
   Math.floor(
@@ -71,7 +95,8 @@ const generateAccessToken = (user) =>
     },
     JWT_SECRET,
     {
-      expiresIn: ACCESS_TOKEN_EXPIRES_IN
+      expiresIn:
+        ACCESS_TOKEN_EXPIRES_IN
     }
   );
 
@@ -86,11 +111,12 @@ const authenticateUser = async (
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email: cleanEmail
-    }
-  });
+  const user =
+    await prisma.user.findUnique({
+      where: {
+        email: cleanEmail
+      }
+    });
 
   if (!user) {
     return null;
@@ -108,7 +134,9 @@ const authenticateUser = async (
     return null;
   }
 
-  if (!isHashedPassword(user.password)) {
+  if (
+    !isHashedPassword(user.password)
+  ) {
     const hashedPassword =
       await bcrypt.hash(password, 10);
 
@@ -116,7 +144,6 @@ const authenticateUser = async (
       where: {
         id: user.id
       },
-
       data: {
         password: hashedPassword
       }
@@ -127,7 +154,10 @@ const authenticateUser = async (
 };
 
 // REGISTER
-exports.register = async (req, res) => {
+exports.register = async (
+  req,
+  res
+) => {
   try {
     const {
       name,
@@ -158,14 +188,29 @@ exports.register = async (req, res) => {
       });
     }
 
-    if (!isValidEmail(cleanEmail)) {
+    if (
+      !isValidEmail(cleanEmail)
+    ) {
       return res.status(400).json({
         error: 'Invalid email format'
       });
     }
 
     if (
-      !VALID_ROLES.includes(selectedRole)
+      !isUniversityEmail(cleanEmail)
+    ) {
+      return res.status(400).json({
+        error:
+          'Registration requires an official university email address',
+        code:
+          'INVALID_UNIVERSITY_EMAIL'
+      });
+    }
+
+    if (
+      !VALID_ROLES.includes(
+        selectedRole
+      )
     ) {
       return res.status(400).json({
         error: `Role must be one of: ${VALID_ROLES.join(
@@ -182,4 +227,36 @@ exports.register = async (req, res) => {
       });
 
     if (existingUser) {
-      return res.status(
+      return res.status(409).json({
+        error:
+          'Email already in use'
+      });
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(password, 10);
+
+    const user =
+      await prisma.user.create({
+        data: {
+          name: cleanName,
+          email: cleanEmail,
+          password: hashedPassword,
+          role: selectedRole,
+          isVerified: true
+        }
+      });
+
+    res.status(201).json({
+      message:
+        'Registration successful',
+      user: sanitizeUser(user)
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};
+```
+

@@ -1,4 +1,5 @@
 const prisma = require('../prismaClient');
+const bcrypt = require('bcryptjs');
 
 const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker', 'Admin'];
 
@@ -15,7 +16,8 @@ exports.getAllUsers = async (req, res) => {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true
+        isVerified: true,
+        actsOfServicePoints: true
       }
     });
 
@@ -55,7 +57,8 @@ exports.activateUser = async (req, res) => {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true
+        isVerified: true,
+        actsOfServicePoints: true
       }
     });
 
@@ -99,7 +102,8 @@ exports.deactivateUser = async (req, res) => {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true
+        isVerified: true,
+        actsOfServicePoints: true
       }
     });
 
@@ -157,7 +161,8 @@ exports.promoteUserRole = async (req, res) => {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true
+        isVerified: true,
+        actsOfServicePoints: true
       }
     });
 
@@ -196,7 +201,8 @@ exports.verifyUser = async (req, res) => {
         email: true,
         role: true,
         isActive: true,
-        isVerified: true
+        isVerified: true,
+        actsOfServicePoints: true
       }
     });
 
@@ -245,3 +251,49 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
   }
 };
+
+/**
+ * PUT /api/admin/users/:id/reset-password
+ * Reset a user's password (admin only)
+ */
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        isVerified: true
+      }
+    });
+
+    res.json({ message: 'Password reset', user: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+

@@ -13,7 +13,7 @@ const STATUS_TRANSITIONS = {
   'Submitted/Pending': ['Assigned', 'In Progress', 'Rejected'],
   'Assigned': ['In Progress', 'Rejected'],
   'In Progress': ['Under Review', 'Rejected'],
-  'Under Review': ['Resolved', 'Rejected'],
+  'Under Review': ['Resolved', 'Rejected', 'In Progress'],
   'Resolved': [],
   'Rejected': []
 };
@@ -82,3 +82,4 @@ module.exports = {
   parsePositiveInt,
   sanitizeText
 };
+
