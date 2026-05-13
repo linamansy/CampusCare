@@ -133,26 +133,34 @@ const main = async () => {
 
     // Issue creation (member only) + list + get by id
     let issue;
+    let completionIssue;
+    let rejectIssue;
     {
-      const formData = new FormData();
-      formData.append('title', 'Smoke issue');
-      formData.append('description', 'Smoke description');
-      formData.append('category', 'Maintenance');
-      formData.append('building', 'Building S');
-      formData.append('floor', '1');
-      formData.append('room', String(stamp % 100000));
-      formData.append('location', `Smoke Location ${stamp}`);
-      formData.append('image', new Blob(['x'], { type: 'image/png' }), 'issue.png');
+      const createIssue = async (suffix) => {
+        const formData = new FormData();
+        formData.append('title', `Smoke issue ${suffix}`);
+        formData.append('description', `Smoke description ${suffix}`);
+        formData.append('category', 'Maintenance');
+        formData.append('building', 'Building S');
+        formData.append('floor', '1');
+        formData.append('room', String((stamp % 100000) + suffix));
+        formData.append('location', `Smoke Location ${stamp} ${suffix}`);
+        formData.append('image', new Blob(['x'], { type: 'image/png' }), `issue-${suffix}.png`);
 
-      const { response: createRes, body: createBody, raw } = await request('/api/issues', {
-        method: 'POST',
-        headers: { ...authHeaders(memberToken) },
-        body: formData
-      });
-      assert(createRes.status === 201, `create issue should return 201: ${raw}`);
-      assert(createBody?.data?.id, 'create issue should return data.id');
-      issue = createBody.data;
-      created.issues.push(issue);
+        const { response: createRes, body: createBody, raw } = await request('/api/issues', {
+          method: 'POST',
+          headers: { ...authHeaders(memberToken) },
+          body: formData
+        });
+        assert(createRes.status === 201, `create issue should return 201: ${raw}`);
+        assert(createBody?.data?.id, 'create issue should return data.id');
+        created.issues.push(createBody.data);
+        return createBody.data;
+      };
+
+      issue = await createIssue(1);
+      completionIssue = await createIssue(2);
+      rejectIssue = await createIssue(3);
 
       const { response: listRes } = await request('/api/issues');
       assert(listRes.status === 200, 'GET /api/issues should return 200');
@@ -165,6 +173,10 @@ const main = async () => {
     {
       await prisma.issue.update({
         where: { id: issue.id },
+        data: { assignedTo: worker.id }
+      });
+      await prisma.issue.update({
+        where: { id: completionIssue.id },
         data: { assignedTo: worker.id }
       });
 
@@ -180,6 +192,21 @@ const main = async () => {
       });
       assert(inProgRes.status === 200, `PUT /in-progress should return 200: ${raw}`);
       assert(inProgBody?.status === 'In Progress', 'in-progress should set status');
+
+      const { response: inProgRes2 } = await request(`/api/issues/${completionIssue.id}/in-progress`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(workerToken) },
+        body: JSON.stringify({ workerId: worker.id })
+      });
+      assert(inProgRes2.status === 200, 'PUT /in-progress should work for second issue');
+
+      const { response: completedRes, body: completedBody, raw: completedRaw } = await request(`/api/issues/${completionIssue.id}/completed`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(workerToken) },
+        body: JSON.stringify({ workerId: worker.id })
+      });
+      assert(completedRes.status === 200, `PUT /completed should return 200: ${completedRaw}`);
+      assert(completedBody?.status === 'Completed', 'completed should set status');
     }
 
     // Comments (both routes exist); verify at least one path works
@@ -212,6 +239,30 @@ const main = async () => {
       await safeUnlink(photoBody.completionPhotoUrl);
     }
 
+    // Notifications
+    {
+      const { response: notifRes, body: notifBody } = await request('/api/notifications', {
+        headers: authHeaders(memberToken)
+      });
+      assert(notifRes.status === 200, 'GET /api/notifications should return 200');
+      assert(Array.isArray(notifBody?.data), 'notifications response should include data array');
+
+      const firstNotification = notifBody.data[0];
+      if (firstNotification) {
+        const { response: readRes } = await request(`/api/notifications/${firstNotification.id}/read`, {
+          method: 'PUT',
+          headers: authHeaders(memberToken)
+        });
+        assert(readRes.status === 200, 'PUT /api/notifications/:id/read should return 200');
+      }
+
+      const { response: readAllRes } = await request('/api/notifications/read-all', {
+        method: 'PUT',
+        headers: authHeaders(memberToken)
+      });
+      assert(readAllRes.status === 200, 'PUT /api/notifications/read-all should return 200');
+    }
+
     // Manager routes (require Manager/Admin)
     {
       const { response: forbidRes } = await request('/api/manager/issues', {
@@ -223,6 +274,25 @@ const main = async () => {
         headers: authHeaders(managerToken)
       });
       assert(mgrRes.status === 200, 'manager should access /api/manager/issues');
+
+      const { response: rejectRes } = await request(`/api/manager/issues/${rejectIssue.id}/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(managerToken) },
+        body: JSON.stringify({ reason: 'Smoke reject reason' })
+      });
+      assert(rejectRes.status === 200, 'manager should be able to reject issues');
+
+      await prisma.issue.update({
+        where: { id: issue.id },
+        data: { status: 'Under Review' }
+      });
+
+      const { response: reworkRes } = await request(`/api/manager/issues/${issue.id}/rework`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(managerToken) },
+        body: JSON.stringify({ reason: 'Smoke rework reason' })
+      });
+      assert(reworkRes.status === 200, 'manager should be able to request rework');
     }
 
     // Admin routes (require Admin)

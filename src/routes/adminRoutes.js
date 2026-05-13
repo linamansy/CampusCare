@@ -12,6 +12,10 @@ router.put('/users/:id/promote', requireAdmin(), adminController.promoteUserRole
 router.delete('/users/:id', requireAdmin(), adminController.deleteUser);
 router.put('/users/:id/verify', requireAdmin(), adminController.verifyUser);
 router.put('/users/:id/reset-password', requireAdmin(), adminController.resetUserPassword);
+router.get('/analytics', requireAdmin(), adminController.getAnalytics);
+router.get('/categories', requireAdmin(), adminController.getCategories);
+router.post('/categories', requireAdmin(), adminController.createCategory);
+router.put('/categories/:name', requireAdmin(), adminController.updateCategory);
+router.delete('/categories/:name', requireAdmin(), adminController.deleteCategory);
 
 module.exports = router;
-

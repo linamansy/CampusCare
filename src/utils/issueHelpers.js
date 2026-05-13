@@ -2,6 +2,7 @@ const ALLOWED_STATUSES = [
   'Submitted/Pending',
   'Assigned',
   'In Progress',
+  'Completed',
   'Under Review',
   'Resolved',
   'Rejected'
@@ -12,7 +13,8 @@ const LEGACY_STATUSES = ['Open'];
 const STATUS_TRANSITIONS = {
   'Submitted/Pending': ['Assigned', 'In Progress', 'Rejected'],
   'Assigned': ['In Progress', 'Rejected'],
-  'In Progress': ['Under Review', 'Rejected'],
+  'In Progress': ['Under Review', 'Completed', 'Rejected'],
+  'Completed': ['Resolved', 'Rejected', 'In Progress'],
   'Under Review': ['Resolved', 'Rejected', 'In Progress'],
   'Resolved': [],
   'Rejected': []

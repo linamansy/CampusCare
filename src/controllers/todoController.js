@@ -1,6 +1,7 @@
 const prisma = require('../prismaClient');
 const { findIssueAssignedToWorker } = require('../services/assignedIssueService');
 const { createNotification, notifyRole } = require('../services/notificationService');
+const { DEFAULT_CATEGORIES, getCategories } = require('../services/categoryService');
 const {
   ALLOWED_STATUSES,
   isAllowedStatus,
@@ -10,18 +11,6 @@ const {
   parsePositiveInt,
   sanitizeText
 } = require('../utils/issueHelpers');
-
-const ALLOWED_CATEGORIES = [
-  'Plumbing',
-  'Electrical',
-  'HVAC',
-  'Cleaning',
-  'Cleanliness',
-  'Maintenance',
-  'Infrastructure',
-  'Sustainability',
-  'Other'
-];
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
@@ -34,6 +23,14 @@ const ISSUE_REPORT_POINTS = 10;
 const CLOSED_STATUSES = ['Resolved', 'Rejected'];
 
 const issueInclude = { user: true, comments: true };
+
+const MANAGER_ROLES = new Set(['Facility Manager', 'Admin']);
+
+const hasManagerAccess = (role) => MANAGER_ROLES.has(role);
+
+const getCurrentRole = (req) => {
+  return typeof req.user?.role === 'string' ? req.user.role : '';
+};
 
 const deriveLocationParts = ({ building, floor, room, location }) => {
   const cleanBuilding = sanitizeText(building);
@@ -129,6 +126,7 @@ exports.createIssue = async (req, res) => {
   try {
     const { title, description, category, location, building, floor, room, userId } = req.body;
     const rawUserId = req.userId ?? userId;
+    const allowedCategories = await getCategories().catch(() => DEFAULT_CATEGORIES);
 
     if (rawUserId == null) {
       return res.status(401).json({ error: 'Authentication required', code: 'NO_AUTH' });
@@ -160,9 +158,9 @@ exports.createIssue = async (req, res) => {
       return res.status(400).json({ error: 'Description must be 1000 characters or less', code: 'DESCRIPTION_TOO_LONG' });
     }
 
-    if (!category || !ALLOWED_CATEGORIES.includes(category)) {
+    if (!category || !allowedCategories.includes(category)) {
       return res.status(400).json({
-        error: `Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`,
+        error: `Category must be one of: ${allowedCategories.join(', ')}`,
         code: 'INVALID_CATEGORY'
       });
     }
@@ -295,9 +293,18 @@ exports.getUserIssues = async (req, res) => {
   try {
     const userId = parsePositiveInt(req.query.userId);
     const { status } = req.query;
+    const currentUserId = parsePositiveInt(req.userId);
+    const currentRole = getCurrentRole(req);
 
     if (!userId) {
       return res.status(400).json({ error: 'userId is required' });
+    }
+
+    if (currentUserId !== userId && !hasManagerAccess(currentRole)) {
+      return res.status(403).json({
+        error: 'You can only view your own issues',
+        code: 'FORBIDDEN'
+      });
     }
 
     const where = { userId };
@@ -318,6 +325,7 @@ exports.getUserIssues = async (req, res) => {
 exports.updateIssueStatus = async (req, res) => {
   const id = parsePositiveInt(req.params.id);
   const nextStatus = normalizeStatus(req.body.status);
+  const currentRole = getCurrentRole(req);
 
   if (!id) {
     return res.status(400).json({ error: 'Invalid issue id' });
@@ -330,6 +338,13 @@ exports.updateIssueStatus = async (req, res) => {
   if (!isAllowedStatus(nextStatus)) {
     return res.status(400).json({
       error: `Status must be one of: ${ALLOWED_STATUSES.join(', ')}`
+    });
+  }
+
+  if (!hasManagerAccess(currentRole)) {
+    return res.status(403).json({
+      error: 'Only Facility Managers or Admins can update issue status through this endpoint',
+      code: 'FORBIDDEN'
     });
   }
 
@@ -383,6 +398,7 @@ exports.assignWorker = async (req, res) => {
     const issueId = parseInt(req.params.id, 10);
     const { workerId } = req.body;
     const userId = req.userId;
+    const currentRole = getCurrentRole(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -403,6 +419,13 @@ exports.assignWorker = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid worker ID'
+      });
+    }
+
+    if (!hasManagerAccess(currentRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Facility Managers or Admins can assign workers'
       });
     }
 
@@ -463,6 +486,7 @@ exports.closeIssue = async (req, res) => {
   try {
     const issueId = parseInt(req.params.id, 10);
     const userId = req.userId;
+    const currentRole = getCurrentRole(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -478,6 +502,13 @@ exports.closeIssue = async (req, res) => {
       });
     }
 
+    if (!hasManagerAccess(currentRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Facility Managers or Admins can resolve issues'
+      });
+    }
+
     const issue = await prisma.issue.findUnique({
       where: { id: issueId }
     });
@@ -486,6 +517,13 @@ exports.closeIssue = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Issue not found'
+      });
+    }
+
+    if (!isValidStatusTransition(issue.status, 'Resolved')) {
+      return res.status(409).json({
+        success: false,
+        message: `Invalid status transition from ${issue.status} to Resolved`
       });
     }
 
@@ -516,6 +554,7 @@ exports.uploadIssuePhoto = async (req, res) => {
   try {
     const issueId = parseInt(req.params.id, 10);
     const userId = req.userId;
+    const currentRole = getCurrentRole(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -549,6 +588,16 @@ exports.uploadIssuePhoto = async (req, res) => {
       });
     }
 
+    const canUpdatePhoto =
+      issue.userId === userId || hasManagerAccess(currentRole);
+
+    if (!canUpdatePhoto) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to update this issue photo'
+      });
+    }
+
     const imagePath = `/uploads/issues/${req.file.filename}`;
 
     const updatedIssue = await prisma.issue.update({
@@ -575,6 +624,7 @@ exports.deleteIssue = async (req, res) => {
   try {
     const issueId = parseInt(req.params.id, 10);
     const userId = req.userId;
+    const currentRole = getCurrentRole(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -598,6 +648,16 @@ exports.deleteIssue = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Issue not found'
+      });
+    }
+
+    const canDelete =
+      issue.userId === userId || hasManagerAccess(currentRole);
+
+    if (!canDelete) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to delete this issue'
       });
     }
 
@@ -722,7 +782,7 @@ exports.markNotificationRead = async (req, res) => {
 
     const updatedNotification = await prisma.notification.update({
       where: { id: notificationId },
-      data: { read: true }
+      data: { isRead: true }
     });
 
     res.json({

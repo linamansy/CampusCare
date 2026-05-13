@@ -307,6 +307,7 @@ exports.rejectIssue = async (req, res) => {
       await tx.comment.create({
         data: {
           issueId: issue.id,
+          userId: req.userId,
           text: `Resolution rejected: ${reason}`
         }
       });
@@ -360,6 +361,7 @@ exports.requestRework = async (req, res) => {
       await tx.comment.create({
         data: {
           issueId: issue.id,
+          userId: req.userId,
           text: `Rework requested: ${reason}`
         }
       });
@@ -518,6 +520,52 @@ exports.deactivateWorker = async (req, res) => {
     });
 
     res.json({ message: 'Worker deactivated', worker: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.getAnalytics = async (req, res) => {
+  try {
+    const [
+      totalIssues,
+      resolvedIssues,
+      rejectedIssues,
+      underReviewIssues,
+      assignedIssues,
+      activeWorkers,
+      issuesByPriority,
+      issuesByStatus
+    ] = await Promise.all([
+      prisma.issue.count(),
+      prisma.issue.count({ where: { status: 'Resolved' } }),
+      prisma.issue.count({ where: { status: 'Rejected' } }),
+      prisma.issue.count({ where: { status: 'Under Review' } }),
+      prisma.issue.count({ where: { assignedTo: { not: null } } }),
+      prisma.user.count({ where: { role: 'Worker', isActive: true } }),
+      prisma.issue.groupBy({ by: ['priority'], _count: { _all: true } }),
+      prisma.issue.groupBy({ by: ['status'], _count: { _all: true } })
+    ]);
+
+    res.json({
+      summary: {
+        totalIssues,
+        resolvedIssues,
+        rejectedIssues,
+        underReviewIssues,
+        assignedIssues,
+        unassignedIssues: totalIssues - assignedIssues,
+        activeWorkers
+      },
+      issuesByPriority: issuesByPriority.map((item) => ({
+        priority: item.priority,
+        count: item._count._all
+      })),
+      issuesByStatus: issuesByStatus.map((item) => ({
+        status: item.status,
+        count: item._count._all
+      }))
+    });
   } catch (error) {
     res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
   }

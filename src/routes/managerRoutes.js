@@ -28,6 +28,12 @@ router.get(
   managerController.searchManagerIssues
 );
 
+router.get(
+  '/analytics',
+  requireManagerOrAdmin(),
+  managerController.getAnalytics
+);
+
 router.put(
   '/issues/:id/assign',
   requireManagerOrAdmin(),

@@ -18,14 +18,10 @@ const { verifyAuth } =
   require('../middleware/auth');
 
 const {
-  authenticateToken,
-  requireRole
-} = require('../middleware/authMiddleware');
+  requireWorker
+} = require('../middleware/rbac');
 
-const workerAuth = [
-  authenticateToken,
-  requireRole('Worker')
-];
+const workerAuth = requireWorker();
 
 const uploadDir = path.join(
   __dirname,
@@ -141,6 +137,7 @@ router.get(
 
 router.get(
   '/user',
+  verifyAuth,
   controller.getUserIssues
 );
 
@@ -149,13 +146,6 @@ router.get(
   verifyAuth,
   controller.getMyIssues
 );
-
-router.get(
-  '/:id',
-  controller.getIssueById
-);
-
-// Notifications
 
 router.get(
   '/notifications',
@@ -167,6 +157,11 @@ router.put(
   '/notifications/:id/read',
   verifyAuth,
   controller.markNotificationRead
+);
+
+router.get(
+  '/:id',
+  controller.getIssueById
 );
 
 // Comments

@@ -1,1 +1,0 @@
-export const CURRENT_WORKER_ID = 1;

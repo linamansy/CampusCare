@@ -1,5 +1,11 @@
 const prisma = require('../prismaClient');
 const bcrypt = require('bcryptjs');
+const {
+  addCategory,
+  deleteCategory,
+  getCategories,
+  updateCategory
+} = require('../services/categoryService');
 
 const VALID_ROLES = ['Community Member', 'Facility Manager', 'Worker', 'Admin'];
 
@@ -297,3 +303,87 @@ exports.resetUserPassword = async (req, res) => {
   }
 };
 
+exports.getAnalytics = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      activeUsers,
+      verifiedUsers,
+      usersByRole,
+      totalIssues,
+      issuesByStatus
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { isVerified: true } }),
+      prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
+      prisma.issue.count(),
+      prisma.issue.groupBy({ by: ['status'], _count: { _all: true } })
+    ]);
+
+    res.json({
+      summary: {
+        totalUsers,
+        activeUsers,
+        inactiveUsers: totalUsers - activeUsers,
+        verifiedUsers,
+        unverifiedUsers: totalUsers - verifiedUsers,
+        totalIssues
+      },
+      usersByRole: usersByRole.map((item) => ({
+        role: item.role,
+        count: item._count._all
+      })),
+      issuesByStatus: issuesByStatus.map((item) => ({
+        status: item.status,
+        count: item._count._all
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await getCategories();
+    res.json({ categories });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.createCategory = async (req, res) => {
+  try {
+    const categories = await addCategory(req.body?.name);
+    res.status(201).json({ message: 'Category created', categories });
+  } catch (error) {
+    const status = error.message === 'Category already exists' || error.message === 'Category name is required' ? 400 : 500;
+    res.status(status).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+    const categories = await updateCategory(req.params.name, req.body?.name);
+    res.json({ message: 'Category updated', categories });
+  } catch (error) {
+    const status = ['Current and next category names are required', 'Category already exists'].includes(error.message)
+      ? 400
+      : error.message === 'Category not found'
+        ? 404
+        : 500;
+
+    res.status(status).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const categories = await deleteCategory(req.params.name);
+    res.json({ message: 'Category deleted', categories });
+  } catch (error) {
+    const status = error.message === 'Category not found' ? 404 : error.message === 'Category name is required' ? 400 : 500;
+    res.status(status).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};

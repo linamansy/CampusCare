@@ -1,91 +1,78 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { Issue } from '@/src/services/api';
-import { Colors } from '@/src/theme/colors';
+import type { Issue } from '../api/types';
+import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Card } from './Card';
+import { StatusPill } from './StatusPill';
 
 interface IssueCardProps {
   issue: Issue;
-  onPress: () => void;
+  onPress?: () => void;
 }
 
-export function IssueCard({ issue, onPress }: IssueCardProps) {
+export const IssueCard = ({ issue, onPress }: IssueCardProps) => {
+  const statusLabel = issue.status?.toUpperCase() || 'PENDING';
+  const tone = issue.priority === 'High' || issue.priority === 'Urgent' ? 'error' : 'primary';
+
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{issue.title}</Text>
-        <View style={[styles.badge, issue.status === 'In Progress' ? styles.inProgress : styles.pending]}>
-          <Text style={styles.badgeText}>{issue.status}</Text>
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      <Card style={styles.card}>
+        <View style={styles.header}>
+          <StatusPill label={issue.priority?.toUpperCase() || 'NORMAL'} tone={tone} />
+          <Text style={styles.dateText}>{issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : ''}</Text>
         </View>
-      </View>
-      <Text style={styles.description} numberOfLines={2}>{issue.description}</Text>
-      <View style={styles.metaRow}>
-        <Text style={styles.metaLabel}>Location</Text>
-        <Text style={styles.metaValue}>{issue.location}</Text>
-      </View>
+        <Text style={styles.title}>{issue.title}</Text>
+        <Text style={styles.subtitle} numberOfLines={2}>
+          {issue.description}
+        </Text>
+        <View style={styles.footer}>
+          <Text style={styles.location}>{issue.location}</Text>
+          <StatusPill label={statusLabel} tone="secondary" />
+        </View>
+      </Card>
     </Pressable>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  pressed: {
+    transform: [{ scale: 0.98 }],
+  },
   card: {
-    backgroundColor: Colors.card,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    marginBottom: Spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
+  },
+  dateText: {
+    fontFamily: Fonts.label,
+    fontSize: TypeScale.label,
+    color: Colors.textMuted,
   },
   title: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 12,
+    fontFamily: Fonts.title,
+    fontSize: TypeScale.title,
+    color: Colors.textPrimary,
   },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  subtitle: {
+    marginTop: Spacing.xs,
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySmall,
+    color: Colors.textSecondary,
   },
-  inProgress: {
-    backgroundColor: Colors.primary,
-  },
-  pending: {
-    backgroundColor: Colors.secondary,
-  },
-  badgeText: {
-    color: Colors.card,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  description: {
-    color: Colors.subText,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  metaRow: {
+  footer: {
+    marginTop: Spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  metaLabel: {
-    color: Colors.subText,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metaValue: {
-    color: Colors.text,
-    fontSize: 12,
-    fontWeight: '700',
+  location: {
+    flex: 1,
+    fontFamily: Fonts.label,
+    fontSize: TypeScale.bodySmall,
+    color: Colors.textSecondary,
+    marginRight: Spacing.sm,
   },
 });
