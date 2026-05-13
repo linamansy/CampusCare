@@ -8,6 +8,17 @@ import { Card } from '../../../src/components/Card';
 import { Input } from '../../../src/components/Input';
 import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
 
+const CATEGORIES = [
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Cleanliness',
+  'Maintenance',
+  'Infrastructure',
+  'Sustainability',
+  'Other',
+];
+
 export default function ReportIssueScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -37,6 +48,11 @@ export default function ReportIssueScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!title.trim() || !description.trim() || !category.trim() || !building.trim() || !floor.trim() || !room.trim()) {
+      setError('Title, description, category, building, floor, room, and photo are required.');
+      return;
+    }
+
     if (!image) {
       setError('An issue photo is required.');
       return;
@@ -75,7 +91,18 @@ export default function ReportIssueScreen() {
       <Card>
         <Input label="Title" value={title} onChangeText={setTitle} />
         <Input label="Description" value={description} onChangeText={setDescription} multiline numberOfLines={4} />
-        <Input label="Category" value={category} onChangeText={setCategory} />
+        <Text style={styles.label}>Category</Text>
+        <View style={styles.choiceGrid}>
+          {CATEGORIES.map((item) => (
+            <Button
+              key={item}
+              title={item}
+              variant={category === item ? 'primary' : 'ghost'}
+              onPress={() => setCategory(item)}
+              style={styles.choice}
+            />
+          ))}
+        </View>
         <Input label="Building" value={building} onChangeText={setBuilding} />
         <Input label="Floor" value={floor} onChangeText={setFloor} />
         <Input label="Room" value={room} onChangeText={setRoom} />
@@ -96,6 +123,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
     color: Colors.textSecondary,
+  },
+  label: {
+    marginBottom: Spacing.sm,
+    fontFamily: Fonts.labelBold,
+    fontSize: TypeScale.label,
+    color: Colors.textSecondary,
+  },
+  choiceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  choice: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
   },
   error: {
     marginTop: Spacing.sm,

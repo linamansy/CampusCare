@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { UserProfile } from './types';
+import type { UserProfile, UserRole } from './types';
 
 export interface AdminAnalyticsResponse {
   summary: {
@@ -19,6 +19,16 @@ export const fetchUsers = async () => {
   return response.data as UserProfile[];
 };
 
+export const createUser = async (payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}) => {
+  const response = await api.post('/users', payload);
+  return response.data as UserProfile;
+};
+
 export const activateUser = async (userId: number) => {
   const response = await api.put(`/admin/users/${userId}/activate`);
   return response.data.user as UserProfile;
@@ -29,7 +39,7 @@ export const deactivateUser = async (userId: number) => {
   return response.data.user as UserProfile;
 };
 
-export const promoteUserRole = async (userId: number, role: string) => {
+export const promoteUserRole = async (userId: number, role: UserRole) => {
   const response = await api.put(`/admin/users/${userId}/promote`, { role });
   return response.data.user as UserProfile;
 };
