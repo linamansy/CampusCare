@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusCare - Issue Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .issue-card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .comment { background: #f9f9f9; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .comment-author { font-weight: bold; }
+        .comment-form { margin-top: 20px; }
+        textarea { width: 100%; padding: 10px; margin: 10px 0; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .verify-btn { background: #28a745; }
+        .verify-btn:hover { background: #218838; }
+        .notifications { position: fixed; top: 20px; right: 20px; width: 300px; max-height: 400px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
+        .notification { padding: 10px; border-bottom: 1px solid #eee; }
+        .notification.unread { background: #e3f2fd; }
+    </style>
+</head>
+<body>
+    <h1>CampusCare Issue Details</h1>
+
+    <div id="issue-container">
+        <div class="issue-card">
+            <h2 id="issue-title">Loading...</h2>
+            <p><strong>Status:</strong> <span id="issue-status"></span></p>
+            <p><strong>Category:</strong> <span id="issue-category"></span></p>
+            <p><strong>Location:</strong> <span id="issue-location"></span></p>
+            <p><strong>Description:</strong> <span id="issue-description"></span></p>
+            <p><strong>Created by:</strong> <span id="issue-creator"></span></p>
+            <div id="verify-section" style="display: none;">
+                <button id="verify-btn" class="verify-btn">Verify Resolution</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="comment-form">
+        <h3>Add Comment</h3>
+        <textarea id="comment-text" rows="4" placeholder="Enter your comment..."></textarea>
+        <button id="submit-comment">Submit Comment</button>
+    </div>
+
+    <div id="comments-container">
+        <h3>Comments</h3>
+        <!-- Comments will be loaded here -->
+    </div>
+
+    <div id="notifications" class="notifications" style="display: none;">
+        <h4>Notifications</h4>
+        <div id="notifications-list"></div>
+    </div>
+
+    <script src="issue-details.js"></script>
+</body>
+</html>

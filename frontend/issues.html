@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusCare - Issues</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .issue-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; cursor: pointer; }
+        .issue-card:hover { background: #f9f9f9; }
+        .status { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.9em; }
+        .status.Open { background: #ffc107; }
+        .status.In_Progress { background: #007bff; }
+        .status.Resolved { background: #28a745; }
+        .status.Verified { background: #6c757d; }
+        .filter-btn { margin: 5px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .filter-btn.active { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>CampusCare Issues</h1>
+
+    <div>
+        <button class="filter-btn active" onclick="filterIssues('')">All</button>
+        <button class="filter-btn" onclick="filterIssues('Open')">Open</button>
+        <button class="filter-btn" onclick="filterIssues('In_Progress')">In Progress</button>
+        <button class="filter-btn" onclick="filterIssues('Resolved')">Resolved</button>
+        <button class="filter-btn" onclick="filterIssues('Verified')">Verified</button>
+    </div>
+
+    <div id="issues-container">
+        <p>Loading issues...</p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentFilter = '';
+
+        async function loadIssues(status = '') {
+            try {
+                let url = `${API_BASE}/issues`;
+                if (status) {
+                    url += `?status=${status}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const container = document.getElementById('issues-container');
+
+                if (data.success && data.data.length > 0) {
+                    container.innerHTML = '';
+                    data.data.forEach(issue => {
+                        const issueDiv = document.createElement('div');
+                        issueDiv.className = 'issue-card';
+                        issueDiv.onclick = () => window.location.href = `issue-details.html?id=${issue.id}`;
+
+                        const statusClass = issue.status.replace(' ', '_');
+                        issueDiv.innerHTML = `
+                            <h3>${issue.title}</h3>
+                            <p><strong>Status:</strong> <span class="status ${statusClass}">${issue.status}</span></p>
+                            <p><strong>Category:</strong> ${issue.category}</p>
+                            <p><strong>Location:</strong> ${issue.location}</p>
+                            <p><strong>Created by:</strong> ${issue.user.name}</p>
+                            <p><strong>Comments:</strong> ${issue.comments.length}</p>
+                            <small>${new Date(issue.createdAt).toLocaleString()}</small>
+                        `;
+                        container.appendChild(issueDiv);
+                    });
+                } else {
+                    container.innerHTML = '<p>No issues found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading issues:', error);
+                document.getElementById('issues-container').innerHTML =
+                    '<p>Error loading issues. Please try again.</p>';
+            }
+        }
+
+        function filterIssues(status) {
+            currentFilter = status;
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            loadIssues(status);
+        }
+
+        // Load all issues on page load
+        window.addEventListener('load', () => loadIssues());
+    </script>
+</body>
+</html>
