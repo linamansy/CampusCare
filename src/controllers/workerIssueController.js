@@ -1,4 +1,3 @@
-```javascript id="q4m8zn"
 const prisma = require('../prismaClient');
 
 const {
@@ -292,6 +291,7 @@ exports.uploadCompletionPhoto =
               await tx.comment.create({
                 data: {
                   issueId,
+                  userId: workerId,
                   text:
                     `Completion note: ${completionNote}`
                 }
@@ -449,4 +449,3 @@ exports.markCompleted =
       next(error);
     }
   };
-```

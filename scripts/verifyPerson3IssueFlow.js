@@ -128,9 +128,14 @@ const main = async () => {
     const notificationCount = await prisma.notification.count({ where: { userId: user.id } });
     assert(notificationCount >= 3, 'Issue submission should create user notifications');
 
+    const authJson = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`
+    };
+
     const invalidStatusResponse = await fetch(`${BASE_URL}/issues/${issueThree.id}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authJson,
       body: JSON.stringify({ status: 'Anything' })
     });
 
@@ -138,7 +143,7 @@ const main = async () => {
 
     const inProgress = await request(`/issues/${issueThree.id}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authJson,
       body: JSON.stringify({ status: 'In Progress' })
     });
 

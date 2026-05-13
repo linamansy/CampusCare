@@ -1,4 +1,3 @@
-```javascript id="u9k2qm"
 const prisma = require('../prismaClient');
 
 const bcrypt = require('bcryptjs');
@@ -153,4 +152,3 @@ exports.createUser = async (
     next(error);
   }
 };
-```

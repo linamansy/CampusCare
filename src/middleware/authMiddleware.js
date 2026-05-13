@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-secret';
+// Must match src/middleware/auth.js and authController JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization || req.headers.Authorization;
@@ -13,6 +14,7 @@ const authenticateToken = (req, res, next) => {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload;
+    req.userId = payload.id;
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, error: 'Invalid or expired token' });

@@ -1,4 +1,3 @@
-```javascript id="x7m2qp"
 const express = require('express');
 
 const router = express.Router();
@@ -92,4 +91,3 @@ router.put(
 );
 
 module.exports = router;
-```

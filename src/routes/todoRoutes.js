@@ -110,6 +110,13 @@ router.put(
   workerIssueController.markCompleted
 );
 
+// Must be before "/:id/completion-photo" so "/comments" is not captured as :id
+router.post(
+  '/comments',
+  workerAuth,
+  controller.createComment
+);
+
 router.post(
   '/:id/completion-photo',
   workerAuth,
@@ -172,12 +179,6 @@ router.get(
 router.post(
   '/:id/comments',
   verifyAuth,
-  controller.createComment
-);
-
-router.post(
-  '/comments',
-  workerAuth,
   controller.createComment
 );
 

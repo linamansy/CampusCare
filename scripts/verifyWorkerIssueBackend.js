@@ -1,5 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
 
 const app = require('../src/app');
 const prisma = require('../src/prismaClient');
@@ -7,7 +9,7 @@ const prisma = require('../src/prismaClient');
 const projectRoot = path.join(__dirname, '..');
 const PORT = Number(process.env.VERIFY_PORT || 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const workerId = Number(process.env.VERIFY_WORKER_ID || 8);
+const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
 
 const request = async (url, options = {}) => {
   const response = await fetch(`${BASE_URL}${url}`, options);
@@ -27,19 +29,35 @@ const main = async () => {
     const instance = app.listen(PORT, () => resolve(instance));
   });
 
-  const email = `verify-worker-${Date.now()}@campuscare.test`;
-  let user;
+  const stamp = Date.now();
+  const reporterEmail = `verify-reporter-${stamp}@campuscare.test`;
+  const workerEmail = `verify-worker-${stamp}@campuscare.test`;
+  let reporter;
+  let worker;
   let issue;
 
   try {
     await request('/');
 
-    user = await prisma.user.create({
+    reporter = await prisma.user.create({
       data: {
-        name: 'Backend Verification User',
-        email,
+        name: 'Backend Verification Reporter',
+        email: reporterEmail,
         password: 'not-used',
-        role: 'student'
+        role: 'Community Member',
+        isActive: true,
+        isVerified: true
+      }
+    });
+
+    worker = await prisma.user.create({
+      data: {
+        name: 'Backend Verification Worker',
+        email: workerEmail,
+        password: 'not-used',
+        role: 'Worker',
+        isActive: true,
+        isVerified: true
       }
     });
 
@@ -47,22 +65,36 @@ const main = async () => {
       data: {
         title: 'Backend verification issue',
         description: 'Disposable issue for worker backend verification',
-        category: 'maintenance',
+        category: 'Maintenance',
         location: 'Verification Lab',
-        userId: user.id,
-        assignedTo: workerId
+        building: 'V',
+        floor: '1',
+        room: 'Lab',
+        userId: reporter.id,
+        assignedTo: worker.id,
+        status: 'Assigned'
       }
     });
 
-    const assignedIssues = await request(`/issues/assigned?workerId=${workerId}`);
+    const workerToken = jwt.sign(
+      { id: worker.id, email: worker.email, role: worker.role, jti: randomUUID() },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const auth = { Authorization: `Bearer ${workerToken}` };
+
+    const assignedIssues = await request(`/issues/assigned?workerId=${worker.id}`, {
+      headers: auth
+    });
     if (!assignedIssues.some((assignedIssue) => assignedIssue.id === issue.id)) {
       throw new Error('Assigned issue was not returned for the worker');
     }
 
     const inProgressIssue = await request(`/issues/${issue.id}/in-progress`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workerId })
+      headers: { 'Content-Type': 'application/json', ...auth },
+      body: JSON.stringify({ workerId: worker.id })
     });
     if (inProgressIssue.status !== 'In Progress') {
       throw new Error('Issue status was not updated to In Progress');
@@ -70,11 +102,11 @@ const main = async () => {
 
     const comment = await request('/issues/comments', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({
         text: 'Verification comment from worker',
         issueId: issue.id,
-        workerId
+        workerId: worker.id
       })
     });
     const savedComment = comment.data || comment;
@@ -83,11 +115,12 @@ const main = async () => {
     }
 
     const formData = new FormData();
-    formData.append('workerId', String(workerId));
-    formData.append('photo', new Blob(['verification-photo'], { type: 'image/png' }), 'verify.png');
+    formData.append('workerId', String(worker.id));
+    formData.append('completionPhoto', new Blob(['verification-photo'], { type: 'image/png' }), 'verify.png');
 
     const photoIssue = await request(`/issues/${issue.id}/completion-photo`, {
       method: 'POST',
+      headers: auth,
       body: formData
     });
     if (!photoIssue.completionPhotoUrl) {
@@ -103,13 +136,27 @@ const main = async () => {
 
     console.log('Worker issue backend verification passed');
   } finally {
+    const userIds = [reporter?.id, worker?.id].filter(Boolean);
+    if (issue?.id || userIds.length) {
+      await prisma.notification.deleteMany({
+        where: {
+          OR: [
+            ...(issue?.id ? [{ issueId: issue.id }] : []),
+            ...(userIds.length ? [{ userId: { in: userIds } }] : [])
+          ]
+        }
+      });
+    }
     if (issue) {
       await prisma.comment.deleteMany({ where: { issueId: issue.id } });
       await prisma.issue.deleteMany({ where: { id: issue.id } });
     }
 
-    if (user) {
-      await prisma.user.deleteMany({ where: { id: user.id } });
+    if (reporter) {
+      await prisma.user.deleteMany({ where: { id: reporter.id } });
+    }
+    if (worker) {
+      await prisma.user.deleteMany({ where: { id: worker.id } });
     }
 
     await prisma.$disconnect();
