@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { fetchWorkerLeaderboard, type LeaderboardEntry } from '../../../src/api/users';
 import { AppShell } from '../../../src/components/AppShell';
 import { Card } from '../../../src/components/Card';
@@ -44,11 +44,11 @@ export default function WorkerLeaderboardScreen() {
   const myRank = entries.findIndex((e) => e.id === user?.id) + 1;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
+    <AppShell
+      title="Leaderboard"
+      subtitle="Worker rankings by completion points."
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      <AppShell title="Leaderboard" subtitle="Worker rankings by completion points.">
         {/* My score banner */}
         <Card style={[styles.myScoreCard, { backgroundColor: colors.primary }]}>
           <View style={styles.myScoreRow}>
@@ -112,13 +112,11 @@ export default function WorkerLeaderboardScreen() {
             );
           })
         )}
-      </AppShell>
-    </ScrollView>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { flexGrow: 1 },
   myScoreCard: { marginBottom: Spacing.md },
   myScoreRow: {
     flexDirection: 'row',

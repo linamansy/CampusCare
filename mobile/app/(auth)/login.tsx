@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
@@ -34,9 +35,10 @@ export default function LoginScreen() {
     <Screen style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <View style={styles.hero}>
-          <View style={[styles.brand, { backgroundColor: colors.primaryContainer }]}>
-            <Text style={[styles.brandMark, { color: colors.onPrimary }]}>CampusCare</Text>
+          <View style={[styles.brand, { backgroundColor: colors.primary }]}>
+            <Ionicons name="school" size={44} color="#FFFFFF" />
           </View>
+          <Text style={[styles.brandName, { color: colors.primary }]}>CampusCare</Text>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Sign In</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Access your campus facilities dashboard</Text>
         </View>
@@ -77,11 +79,12 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
-  brandMark: {
+  brandName: {
     fontFamily: Fonts.display,
-    fontSize: 18,
+    fontSize: 22,
+    marginBottom: Spacing.md,
   },
   title: {
     fontFamily: Fonts.headline,

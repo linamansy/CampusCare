@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,9 +11,10 @@ interface AppShellProps {
   icon?: keyof typeof Ionicons.glyphMap;
   children: ReactNode;
   rightSlot?: ReactNode;
+  refreshControl?: React.ReactElement<typeof RefreshControl>;
 }
 
-export const AppShell = ({ title, subtitle, icon = 'school', children, rightSlot }: AppShellProps) => {
+export const AppShell = ({ title, subtitle, icon = 'school', children, rightSlot, refreshControl }: AppShellProps) => {
   const { colors, isDark } = useTheme();
 
   const gradientColors = isDark
@@ -48,7 +49,11 @@ export const AppShell = ({ title, subtitle, icon = 'school', children, rightSlot
         </View>
         {rightSlot}
       </LinearGradient>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
+      >
         {children}
       </ScrollView>
     </SafeAreaView>

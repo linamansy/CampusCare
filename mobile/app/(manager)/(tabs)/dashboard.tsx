@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { fetchManagerIssues, fetchWorkers } from '../../../src/api/manager';
 import type { Issue, UserProfile } from '../../../src/api/types';
 import { AppShell } from '../../../src/components/AppShell';
@@ -55,11 +55,11 @@ export default function ManagerDashboardScreen() {
     .slice(0, 3);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
+    <AppShell
+      title="Manager Dashboard"
+      subtitle="Live campus issue operations at a glance."
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      <AppShell title="Manager Dashboard" subtitle="Live campus issue operations at a glance.">
         <View style={styles.row}>
           <MetricCard label="Total Issues" value={issues.length} tone="primary" icon="list" />
           <MetricCard label="Urgent / High" value={urgent} tone="error" icon="alert-circle" />
@@ -92,13 +92,11 @@ export default function ManagerDashboardScreen() {
             ))}
           </>
         ) : null}
-      </AppShell>
-    </ScrollView>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { flexGrow: 1 },
   row: {
     flexDirection: 'row',
     gap: Spacing.md,
