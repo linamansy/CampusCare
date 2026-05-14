@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { fetchMyIssues } from '../../../src/api/issues';
 import { fetchNotifications } from '../../../src/api/notifications';
 import type { Issue, NotificationItem } from '../../../src/api/types';
@@ -15,14 +16,16 @@ import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 export default function MemberHomeScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const router = useRouter();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const [issueData, notificationData] = await Promise.all([fetchMyIssues(), fetchNotifications()]);
       setIssues(issueData);
@@ -31,50 +34,60 @@ export default function MemberHomeScreen() {
       setError(err?.response?.data?.error || 'Could not load dashboard');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  if (loading) {
-    return <LoadingState label="Loading dashboard..." />;
-  }
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+  };
 
-  if (error) {
-    return <ErrorState message={error} onRetry={() => load()} />;
-  }
+  if (loading) return <LoadingState label="Loading dashboard..." />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
 
-  const openIssues = issues.filter((issue) => !['Resolved', 'Rejected'].includes(issue.status));
-  const resolvedIssues = issues.filter((issue) => issue.status === 'Resolved');
-  const unreadNotifications = notifications.filter((item) => !item.isRead).length;
+  const openIssues = issues.filter((i) => !['Resolved', 'Rejected'].includes(i.status));
+  const resolvedIssues = issues.filter((i) => i.status === 'Resolved');
+  const unreadNotifications = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <AppShell title="Community Dashboard" subtitle="Track requests, points, and live campus updates.">
-      <View style={styles.metricsRow}>
-        <MetricCard label="Open Issues" value={openIssues.length} />
-        <MetricCard label="Resolved" value={resolvedIssues.length} tone="secondary" />
-      </View>
-      <View style={styles.metricsRow}>
-        <MetricCard label="Unread Alerts" value={unreadNotifications} />
-        <MetricCard label="Acts of Service" value={user?.actsOfServicePoints || 0} tone="secondary" />
-      </View>
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Requests</Text>
-      {issues.length === 0 ? (
-        <EmptyState title="No issues yet" subtitle="Submit your first campus maintenance issue from the Report tab." />
-      ) : (
-        <View>
-          {issues.slice(0, 4).map((issue) => (
-            <IssueCard key={issue.id} issue={issue} />
-          ))}
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+    >
+      <AppShell title="Community Dashboard" subtitle="Track requests, points, and live campus updates.">
+        <View style={styles.metricsRow}>
+          <MetricCard label="Open Issues" value={openIssues.length} />
+          <MetricCard label="Resolved" value={resolvedIssues.length} tone="secondary" />
         </View>
-      )}
-    </AppShell>
+        <View style={styles.metricsRow}>
+          <MetricCard label="Unread Alerts" value={unreadNotifications} />
+          <MetricCard label="Acts of Service" value={user?.actsOfServicePoints || 0} tone="secondary" />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Requests</Text>
+        {issues.length === 0 ? (
+          <EmptyState title="No issues yet" subtitle="Submit your first campus maintenance issue from the Report tab." />
+        ) : (
+          <View>
+            {issues.slice(0, 5).map((issue) => (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                onPress={() => router.push(`/(member)/issue/${issue.id}` as any)}
+              />
+            ))}
+          </View>
+        )}
+      </AppShell>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContent: { flexGrow: 1 },
   metricsRow: {
     flexDirection: 'row',
     gap: Spacing.md,

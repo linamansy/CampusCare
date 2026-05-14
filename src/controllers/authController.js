@@ -358,7 +358,8 @@ exports.me = async (req, res) => {
         role: true,
         isActive: true,
         isVerified: true,
-        actsOfServicePoints: true
+        actsOfServicePoints: true,
+        points: true
       }
     });
 

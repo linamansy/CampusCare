@@ -1,7 +1,12 @@
 import { create } from 'axios';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
+  // Web browser runs on the same machine as the backend — localhost always works
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000';
+  }
   const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL;
   const extra = Constants.expoConfig?.extra as Record<string, string> | undefined;
   return fromEnv || extra?.apiBaseUrl || 'http://localhost:3000';

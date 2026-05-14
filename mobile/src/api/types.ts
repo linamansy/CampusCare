@@ -31,6 +31,7 @@ export interface Issue {
   userId: number;
   createdAt?: string;
   updatedAt?: string;
+  resolvedAt?: string | null;
   user?: UserProfile;
   comments?: IssueComment[];
 }
