@@ -61,19 +61,19 @@ export default function ManagerDashboardScreen() {
     >
       <AppShell title="Manager Dashboard" subtitle="Live campus issue operations at a glance.">
         <View style={styles.row}>
-          <MetricCard label="Total Issues" value={issues.length} />
-          <MetricCard label="Urgent / High" value={urgent} tone="secondary" />
+          <MetricCard label="Total Issues" value={issues.length} tone="primary" icon="list" />
+          <MetricCard label="Urgent / High" value={urgent} tone="error" icon="alert-circle" />
         </View>
         <View style={styles.row}>
-          <MetricCard label="Under Review" value={underReview} />
-          <MetricCard label="Active Workers" value={activeWorkers} tone="secondary" />
+          <MetricCard label="Under Review" value={underReview} tone="secondary" icon="eye" />
+          <MetricCard label="Active Workers" value={activeWorkers} tone="tertiary" icon="people" />
         </View>
         <View style={styles.row}>
-          <MetricCard label="Pending Review" value={pending} />
-          <MetricCard label="Unassigned" value={unassigned} tone="secondary" />
+          <MetricCard label="Pending" value={pending} tone="warning" icon="time" />
+          <MetricCard label="Unassigned" value={unassigned} tone="warning" icon="person-add" />
         </View>
         <View style={styles.row}>
-          <MetricCard label="Resolved" value={resolved} />
+          <MetricCard label="Resolved" value={resolved} tone="success" icon="checkmark-circle" />
         </View>
 
         {recentIssues.length > 0 ? (

@@ -50,17 +50,17 @@ export default function WorkerLeaderboardScreen() {
     >
       <AppShell title="Leaderboard" subtitle="Worker rankings by completion points.">
         {/* My score banner */}
-        <Card style={[styles.myScoreCard, { backgroundColor: colors.primaryContainer }]}>
+        <Card style={[styles.myScoreCard, { backgroundColor: colors.primary }]}>
           <View style={styles.myScoreRow}>
             <View>
-              <Text style={[styles.myScoreLabel, { color: colors.onPrimary }]}>Your Score</Text>
-              <Text style={[styles.myScoreValue, { color: colors.onPrimary }]}>
+              <Text style={[styles.myScoreLabel, { color: 'rgba(255,255,255,0.75)' }]}>Your Score</Text>
+              <Text style={[styles.myScoreValue, { color: '#FFFFFF' }]}>
                 {user?.points || 0} pts
               </Text>
             </View>
             {myRank > 0 ? (
-              <View style={styles.myRankBadge}>
-                <Text style={[styles.myRankText, { color: colors.onPrimary }]}>
+              <View style={[styles.myRankBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text style={[styles.myRankText, { color: '#FFFFFF' }]}>
                   Rank #{myRank}
                 </Text>
               </View>
@@ -94,8 +94,8 @@ export default function WorkerLeaderboardScreen() {
                       {rank}
                     </Text>
                   </View>
-                  <View style={[styles.avatarCircle, { backgroundColor: colors.primaryContainer }]}>
-                    <Text style={[styles.avatarText, { color: colors.onPrimary }]}>
+                  <View style={[styles.avatarCircle, { backgroundColor: isMe ? colors.primary : colors.secondaryContainer }]}>
+                    <Text style={[styles.avatarText, { color: isMe ? '#FFFFFF' : colors.secondary }]}>
                       {entry.name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
