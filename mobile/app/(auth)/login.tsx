@@ -6,11 +6,12 @@ import { Card } from '../../src/components/Card';
 import { Input } from '../../src/components/Input';
 import { Screen } from '../../src/components/Screen';
 import { useAuth } from '../../src/state/auth-context';
-import { Colors, Fonts, Spacing, TypeScale } from '../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,22 +34,22 @@ export default function LoginScreen() {
     <Screen style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <View style={styles.hero}>
-          <View style={styles.brand}>
-            <Text style={styles.brandMark}>CampusCare</Text>
+          <View style={[styles.brand, { backgroundColor: colors.primaryContainer }]}>
+            <Text style={[styles.brandMark, { color: colors.onPrimary }]}>CampusCare</Text>
           </View>
-          <Text style={styles.title}>Sign In</Text>
-          <Text style={styles.subtitle}>Access your campus facilities dashboard</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Sign In</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Access your campus facilities dashboard</Text>
         </View>
         <Card style={styles.card}>
           <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
           <Input label="Password" value={password} onChangeText={setPassword} secureTextEntry />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
           <Button title={submitting ? 'Signing In...' : 'Login'} onPress={handleSubmit} disabled={submitting} />
           <View style={styles.links}>
-            <Link href="/(auth)/forgot-password" style={styles.link}>
+            <Link href="/(auth)/forgot-password" style={[styles.link, { color: colors.primary }]}>
               Forgot password?
             </Link>
-            <Link href="/(auth)/register" style={styles.link}>
+            <Link href="/(auth)/register" style={[styles.link, { color: colors.primary }]}>
               Create account
             </Link>
           </View>
@@ -74,7 +75,6 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 28,
-    backgroundColor: Colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,
@@ -82,25 +82,21 @@ const styles = StyleSheet.create({
   brandMark: {
     fontFamily: Fonts.display,
     fontSize: 18,
-    color: Colors.onPrimary,
   },
   title: {
     fontFamily: Fonts.headline,
     fontSize: TypeScale.headline,
-    color: Colors.textPrimary,
   },
   subtitle: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   card: {
     padding: Spacing.lg,
   },
   error: {
     marginBottom: Spacing.md,
-    color: Colors.error,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
   },
@@ -109,7 +105,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   link: {
-    color: Colors.primary,
     fontFamily: Fonts.labelBold,
     fontSize: TypeScale.bodySmall,
     textAlign: 'center',

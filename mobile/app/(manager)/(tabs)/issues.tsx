@@ -9,9 +9,10 @@ import { EmptyState } from '../../../src/components/EmptyState';
 import { ErrorState } from '../../../src/components/ErrorState';
 import { LoadingState } from '../../../src/components/LoadingState';
 import { StatusPill } from '../../../src/components/StatusPill';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function ManagerIssuesScreen() {
+  const { colors } = useTheme();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [workers, setWorkers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +54,9 @@ export default function ManagerIssuesScreen() {
 
           return (
             <Card key={issue.id} style={styles.card}>
-              <Text style={styles.title}>{issue.title}</Text>
-              <Text style={styles.meta}>{issue.location}</Text>
-              <Text style={styles.body}>{issue.description}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{issue.title}</Text>
+              <Text style={[styles.meta, { color: colors.textMuted }]}>{issue.location}</Text>
+              <Text style={[styles.body, { color: colors.textSecondary }]}>{issue.description}</Text>
               <StatusPill label={`${issue.priority} • ${issue.status}`} tone="primary" />
               {!issue.assignedTo && fallbackWorker ? (
                 <Button title={`Assign ${fallbackWorker.name}`} onPress={async () => {
@@ -100,19 +101,16 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   meta: {
     marginTop: Spacing.sm,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
-    color: Colors.textMuted,
   },
   body: {
     marginTop: Spacing.sm,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   action: {
     marginTop: Spacing.md,

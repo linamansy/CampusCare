@@ -1,11 +1,12 @@
 import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../src/theme';
+import { useTheme } from '../../../src/theme';
 import { LoadingState } from '../../../src/components/LoadingState';
 import { useAuth } from '../../../src/state/auth-context';
 
 export default function AdminTabs() {
   const { user, loading } = useAuth();
+  const { colors } = useTheme();
 
   if (loading) {
     return <LoadingState label="Loading admin console..." />;
@@ -24,14 +25,14 @@ export default function AdminTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.surfaceHigh,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.surfaceHigh,
           height: 72,
           paddingTop: 6,
           paddingBottom: 10,
         },
-        tabBarActiveTintColor: Colors.secondary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
       }}
     >
       <Tabs.Screen

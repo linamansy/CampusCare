@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { api } from './client';
 import type { Issue, IssueComment } from './types';
 
@@ -16,6 +17,8 @@ export const fetchIssueById = async (id: number) => {
   return response.data.data as Issue;
 };
 
+import { uploadImageToSupabase } from './supabaseClient';
+
 export const createIssue = async (payload: {
   title: string;
   description: string;
@@ -28,23 +31,32 @@ export const createIssue = async (payload: {
   imageName: string;
   imageType: string;
 }) => {
-  const formData = new FormData();
-  formData.append('title', payload.title);
-  formData.append('description', payload.description);
-  formData.append('category', payload.category);
-  formData.append('building', payload.building);
-  formData.append('floor', payload.floor);
-  formData.append('room', payload.room);
-  formData.append('location', payload.location || `${payload.building} - Floor ${payload.floor} - Room ${payload.room}`);
-  formData.append('image', {
-    uri: payload.imageUri,
-    name: payload.imageName,
-    type: payload.imageType,
-  } as any);
+  console.log('[API] Creating issue with direct Supabase upload...');
+  
+  // 1. Upload to Supabase first
+  const extension = payload.imageName.split('.').pop() || 'jpg';
+  const supabasePath = `issues/${Date.now()}-${Math.round(Math.random() * 1e7)}.${extension}`;
+  
+  const imageUrl = await uploadImageToSupabase(
+    payload.imageUri,
+    supabasePath,
+    payload.imageType
+  );
+  
+  console.log('[API] Image uploaded to Supabase:', imageUrl);
 
-  const response = await api.post('/issues', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  // 2. Send the URL to our backend as a regular JSON request
+  const response = await api.post('/issues', {
+    title: payload.title,
+    description: payload.description,
+    category: payload.category,
+    building: payload.building,
+    floor: payload.floor,
+    room: payload.room,
+    location: payload.location || `${payload.building} - Floor ${payload.floor} - Room ${payload.room}`,
+    imageUrl: imageUrl
   });
+
   return response.data.data as Issue;
 };
 

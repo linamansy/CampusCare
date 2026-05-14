@@ -5,15 +5,7 @@ const multer = require('multer');
 const completionPhotoDir = path.join(__dirname, '..', '..', 'uploads', 'completion-photos');
 fs.mkdirSync(completionPhotoDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, completionPhotoDir);
-  },
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const completionPhotoUpload = multer({
   storage,

@@ -8,9 +8,10 @@ import { EmptyState } from '../../../src/components/EmptyState';
 import { ErrorState } from '../../../src/components/ErrorState';
 import { Input } from '../../../src/components/Input';
 import { LoadingState } from '../../../src/components/LoadingState';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function AdminCategoriesScreen() {
+  const { colors } = useTheme();
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,9 +46,7 @@ export default function AdminCategoriesScreen() {
       <Card>
         <Input label="New Category" value={newCategory} onChangeText={setNewCategory} />
         <Button title="Add Category" onPress={async () => {
-          if (!newCategory.trim()) {
-            return;
-          }
+          if (!newCategory.trim()) return;
           await createCategory(newCategory);
           setNewCategory('');
           await load();
@@ -59,7 +58,7 @@ export default function AdminCategoriesScreen() {
       ) : (
         categories.map((category) => (
           <Card key={category} style={styles.card}>
-            <Text style={styles.title}>{category}</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>{category}</Text>
             <View style={styles.actions}>
               <Button title="Rename" variant="ghost" onPress={async () => {
                 await updateCategory(category, `${category} Updated`);
@@ -84,7 +83,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   actions: {
     marginTop: Spacing.md,

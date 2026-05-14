@@ -1,5 +1,5 @@
 import { StyleSheet, Text } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 import { Card } from './Card';
 
 export const MetricCard = ({
@@ -11,10 +11,18 @@ export const MetricCard = ({
   value: string | number;
   tone?: 'primary' | 'secondary' | 'muted';
 }) => {
+  const { colors } = useTheme();
+
+  const borderColor = {
+    primary: colors.primaryContainer,
+    secondary: colors.secondaryContainer,
+    muted: colors.surfaceHigh,
+  }[tone];
+
   return (
-    <Card style={[styles.card, toneStyles[tone]]}>
-      <Text style={styles.value}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+    <Card style={[styles.card, { borderColor }]}>
+      <Text style={[styles.value, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
     </Card>
   );
 };
@@ -27,26 +35,12 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: Fonts.display,
     fontSize: TypeScale.headline,
-    color: Colors.textPrimary,
   },
   label: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
-    color: Colors.textSecondary,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-  },
-});
-
-const toneStyles = StyleSheet.create({
-  primary: {
-    borderColor: Colors.primaryContainer,
-  },
-  secondary: {
-    borderColor: Colors.secondaryContainer,
-  },
-  muted: {
-    borderColor: Colors.surfaceHigh,
   },
 });

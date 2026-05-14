@@ -9,9 +9,10 @@ import { EmptyState } from '../../../src/components/EmptyState';
 import { ErrorState } from '../../../src/components/ErrorState';
 import { LoadingState } from '../../../src/components/LoadingState';
 import { StatusPill } from '../../../src/components/StatusPill';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function MemberIssuesScreen() {
+  const { colors } = useTheme();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +48,12 @@ export default function MemberIssuesScreen() {
       ) : (
         issues.map((issue) => (
           <Card key={issue.id} style={styles.card}>
-            <Text style={styles.title}>{issue.title}</Text>
-            <Text style={styles.copy}>{issue.description}</Text>
-            <Text style={styles.location}>{issue.location}</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>{issue.title}</Text>
+            <Text style={[styles.copy, { color: colors.textSecondary }]}>{issue.description}</Text>
+            <Text style={[styles.location, { color: colors.textMuted }]}>{issue.location}</Text>
             <StatusPill label={issue.status} tone={issue.status === 'Resolved' ? 'secondary' : 'primary'} />
-            {issue.completionNote ? <Text style={styles.meta}>Completion note: {issue.completionNote}</Text> : null}
-            {issue.rejectionReason ? <Text style={styles.meta}>Rejection/rework note: {issue.rejectionReason}</Text> : null}
+            {issue.completionNote ? <Text style={[styles.meta, { color: colors.textSecondary }]}>Completion note: {issue.completionNote}</Text> : null}
+            {issue.rejectionReason ? <Text style={[styles.meta, { color: colors.textSecondary }]}>Rejection/rework note: {issue.rejectionReason}</Text> : null}
             {issue.status === 'Resolved' && !issue.verifiedBy ? (
               <Button title="Verify Resolution" onPress={async () => {
                 await verifyResolution(issue.id);
@@ -73,25 +74,21 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   copy: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   location: {
     marginTop: Spacing.sm,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
-    color: Colors.textMuted,
   },
   meta: {
     marginTop: Spacing.sm,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   button: {
     marginTop: Spacing.md,

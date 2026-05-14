@@ -61,7 +61,7 @@ const requireAdmin = () => requireRole('Admin');
 /**
  * Shorthand middleware for facility manager-only routes
  */
-const requireManager = () => requireRole('Facility Manager');
+const requireManager = () => requireRole(['Facility Manager', 'Facility Management']);
 
 /**
  * Shorthand middleware for worker-only routes
@@ -76,7 +76,7 @@ const requireMember = () => requireRole('Community Member');
 /**
  * Middleware for manager OR admin (for manager dashboard accessible to both)
  */
-const requireManagerOrAdmin = () => requireRole(['Facility Manager', 'Admin']);
+const requireManagerOrAdmin = () => requireRole(['Facility Manager', 'Facility Management', 'Admin']);
 
 module.exports = {
   requireRole,

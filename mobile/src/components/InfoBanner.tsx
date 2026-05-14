@@ -1,32 +1,30 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
 export const InfoBanner = ({ title, message }: { title: string; message: string }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+    <View style={[styles.container, { backgroundColor: colors.surfaceLow, borderColor: colors.outlineVariant }]}>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surfaceLow,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
     borderRadius: 18,
     padding: Spacing.md,
   },
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.body,
-    color: Colors.textPrimary,
   },
   message: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
 });

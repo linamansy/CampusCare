@@ -1,12 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
 export const EmptyState = ({ title, subtitle }: { title: string; subtitle?: string }) => {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
-      <View style={styles.icon} />
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <View style={[styles.icon, { backgroundColor: colors.surfaceHigh }]} />
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      {subtitle ? <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text> : null}
     </View>
   );
 };
@@ -20,19 +22,16 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: Colors.surfaceHigh,
     marginBottom: Spacing.md,
   },
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   subtitle: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
     textAlign: 'center',
   },
 });

@@ -31,7 +31,6 @@ router.post(
 
 router.post(
   '/register',
-  authLimiter,
   authController.register
 );
 

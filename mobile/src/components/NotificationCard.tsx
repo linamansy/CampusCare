@@ -1,17 +1,28 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NotificationItem } from '../api/types';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 import { Card } from './Card';
 
 export const NotificationCard = ({ item, onPress }: { item: NotificationItem; onPress?: () => void }) => {
+  const { colors } = useTheme();
+
   return (
     <Pressable onPress={onPress}>
-      <Card style={[styles.card, item.isRead ? styles.read : styles.unread]}>
+      <Card
+        style={[
+          styles.card,
+          item.isRead
+            ? { borderColor: colors.surfaceHigh, opacity: 0.75 }
+            : { borderColor: colors.primaryContainer },
+        ]}
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.time}>{item.createdAt ? new Date(item.createdAt).toLocaleTimeString() : ''}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title}</Text>
+          <Text style={[styles.time, { color: colors.textMuted }]}>
+            {item.createdAt ? new Date(item.createdAt).toLocaleTimeString() : ''}
+          </Text>
         </View>
-        <Text style={styles.message}>{item.message}</Text>
+        <Text style={[styles.message, { color: colors.textSecondary }]}>{item.message}</Text>
       </Card>
     </Pressable>
   );
@@ -20,13 +31,6 @@ export const NotificationCard = ({ item, onPress }: { item: NotificationItem; on
 const styles = StyleSheet.create({
   card: {
     marginBottom: Spacing.md,
-  },
-  unread: {
-    borderColor: Colors.primaryContainer,
-  },
-  read: {
-    borderColor: Colors.surfaceHigh,
-    opacity: 0.75,
   },
   header: {
     flexDirection: 'row',
@@ -37,18 +41,15 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.body,
-    color: Colors.textPrimary,
     flex: 1,
     marginRight: Spacing.sm,
   },
   time: {
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
-    color: Colors.textMuted,
   },
   message: {
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
 });

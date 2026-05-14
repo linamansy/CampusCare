@@ -9,11 +9,12 @@ import { ErrorState } from '../../../src/components/ErrorState';
 import { IssueCard } from '../../../src/components/IssueCard';
 import { LoadingState } from '../../../src/components/LoadingState';
 import { MetricCard } from '../../../src/components/MetricCard';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
 import { useAuth } from '../../../src/state/auth-context';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function MemberHomeScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ export default function MemberHomeScreen() {
         <MetricCard label="Unread Alerts" value={unreadNotifications} />
         <MetricCard label="Acts of Service" value={user?.actsOfServicePoints || 0} tone="secondary" />
       </View>
-      <Text style={styles.sectionTitle}>Recent Requests</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Requests</Text>
       {issues.length === 0 ? (
         <EmptyState title="No issues yet" subtitle="Submit your first campus maintenance issue from the Report tab." />
       ) : (
@@ -82,6 +83,5 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontFamily: Fonts.headline,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
 });

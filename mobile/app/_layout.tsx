@@ -3,7 +3,23 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
 import { AuthProvider } from '../src/state/auth-context';
-import { Colors } from '../src/theme';
+import { ThemeProvider, useTheme } from '../src/theme';
+
+function RootLayoutContent() {
+  const { isDark, colors } = useTheme();
+  
+  return (
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -19,14 +35,10 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.background },
-        }}
-      />
-      <StatusBar style="dark" />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootLayoutContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

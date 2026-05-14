@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Issue } from '../api/types';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 import { Card } from './Card';
 import { StatusPill } from './StatusPill';
 
@@ -10,6 +10,7 @@ interface IssueCardProps {
 }
 
 export const IssueCard = ({ issue, onPress }: IssueCardProps) => {
+  const { colors } = useTheme();
   const statusLabel = issue.status?.toUpperCase() || 'PENDING';
   const tone = issue.priority === 'High' || issue.priority === 'Urgent' ? 'error' : 'primary';
 
@@ -18,14 +19,16 @@ export const IssueCard = ({ issue, onPress }: IssueCardProps) => {
       <Card style={styles.card}>
         <View style={styles.header}>
           <StatusPill label={issue.priority?.toUpperCase() || 'NORMAL'} tone={tone} />
-          <Text style={styles.dateText}>{issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : ''}</Text>
+          <Text style={[styles.dateText, { color: colors.textMuted }]}>
+            {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : ''}
+          </Text>
         </View>
-        <Text style={styles.title}>{issue.title}</Text>
-        <Text style={styles.subtitle} numberOfLines={2}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{issue.title}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2}>
           {issue.description}
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.location}>{issue.location}</Text>
+          <Text style={[styles.location, { color: colors.textSecondary }]}>{issue.location}</Text>
           <StatusPill label={statusLabel} tone="secondary" />
         </View>
       </Card>
@@ -49,18 +52,15 @@ const styles = StyleSheet.create({
   dateText: {
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
-    color: Colors.textMuted,
   },
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   subtitle: {
     marginTop: Spacing.xs,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   footer: {
     marginTop: Spacing.md,
@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Fonts.label,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
     marginRight: Spacing.sm,
   },
 });

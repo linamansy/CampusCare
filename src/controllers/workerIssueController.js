@@ -5,7 +5,8 @@ const {
 } = require('../services/assignedIssueService');
 
 const {
-  notifyRole
+  notifyRole,
+  createNotification
 } = require('../services/notificationService');
 
 const {
@@ -14,9 +15,8 @@ const {
   sanitizeText
 } = require('../utils/issueHelpers');
 
-const {
-  addPoints
-} = require('../services/pointsService');
+const { addPoints } = require('../services/pointsService');
+const { uploadToSupabase } = require('../services/imageUploadService');
 
 const resolveWorkerId = (
   req,
@@ -187,6 +187,24 @@ exports.markInProgress =
           }
         });
 
+      // Notify the reporter that work has started
+      await createNotification({
+        userId: issue.userId,
+        type: 'WORK_STARTED',
+        title: 'Worker started work',
+        message: `A worker has started working on your ticket #${issueId}.`,
+        issueId: issue.id
+      });
+
+      // Notify the manager that work has started
+      await notifyRole({
+        role: 'Facility Manager',
+        type: 'WORK_STARTED',
+        title: 'Worker started task',
+        message: `Worker #${workerId} has started working on ticket #${issueId}.`,
+        issueId: issue.id
+      });
+
       res.json(issue);
 
     } catch (error) {
@@ -229,10 +247,14 @@ exports.uploadCompletionPhoto =
       });
     }
 
-    if (!req.file) {
+    const imageUrl = req.body.imageUrl || req.body.image || req.body.photo || req.body.photoUrl || req.body.imageUri || req.body.image_url || req.body.photo_url;
+
+    if (!req.file && !imageUrl) {
+      console.warn('[WARN] uploadCompletionPhoto failed: No photo file or URL provided. Body keys:', Object.keys(req.body));
       return res.status(400).json({
         error:
-          'Missing photo file'
+          'Missing photo file or URL',
+        code: 'IMAGE_REQUIRED'
       });
     }
 
@@ -281,8 +303,18 @@ exports.uploadCompletionPhoto =
         });
       }
 
-      const photoUrl =
-        `/uploads/completion-photos/${req.file.filename}`;
+      // Upload to Supabase if file is provided, otherwise use imageUrl
+      let photoUrl = imageUrl;
+      if (req.file) {
+        const extension = req.file.originalname.split('.').pop() || 'jpg';
+        const supabasePath = `completion-photos/${Date.now()}-${Math.round(Math.random() * 1e9)}.${extension}`;
+        
+        photoUrl = await uploadToSupabase(
+          req.file.buffer || req.file.path, 
+          supabasePath, 
+          req.file.mimetype
+        );
+      }
 
       const issue =
         await prisma.$transaction(
@@ -303,28 +335,16 @@ exports.uploadCompletionPhoto =
                 where: {
                   id: issueId
                 },
-
                 data: {
-                  completionPhotoUrl:
-                    photoUrl,
-
-                  completionNote:
-                    completionNote || null,
-
-                  status:
-                    'Under Review'
-                },
-
-                include: {
-                  comments: true,
-                  user: true
+                  status: 'Under Review',
+                  completionPhotoUrl: photoUrl,
+                  completionNote: completionNote
                 }
               });
 
+            // Notify Manager
             await notifyRole({
-              role:
-                'Facility Manager',
-
+              role: 'Facility Manager',
               type:
                 'WORKER_COMPLETION_SUBMITTED',
 
@@ -336,6 +356,17 @@ exports.uploadCompletionPhoto =
 
               issueId
             }, tx);
+
+            // Notify Reporter (Member)
+            await tx.notification.create({
+              data: {
+                userId: updatedIssue.userId,
+                type: 'WORKER_COMPLETED',
+                title: 'Ticket ready for your review',
+                message: `Work on ticket #${issueId} is finished. Please check the completion photo.`,
+                issueId: updatedIssue.id
+              }
+            });
 
             return updatedIssue;
           }
@@ -437,6 +468,15 @@ exports.markCompleted =
               'Completed'
           }
         });
+
+      // Notify Reporter
+      await createNotification({
+        userId: issue.userId,
+        type: 'STATUS_CHANGED',
+        title: 'Work completed',
+        message: `Work on your ticket #${issueId} is now complete.`,
+        issueId: issue.id
+      });
 
       await addPoints(
         workerId,

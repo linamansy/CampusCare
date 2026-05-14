@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 
 const issueRoutes = require('./routes/todoRoutes');
 const managerRoutes = require('./routes/managerRoutes');
@@ -13,15 +14,16 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// CORS
+app.use(cors());
+app.use(express.json());
+
+// CORS manual overrides and tunnel bypass
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-
   res.header(
     'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, x-user-id, x-userid'
+    'Content-Type, Authorization, x-user-id, x-userid, bypass-tunnel-reminder'
   );
-
   res.header(
     'Access-Control-Allow-Methods',
     'GET, POST, PUT, DELETE, OPTIONS'
@@ -33,8 +35,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
-app.use(express.json());
 
 // Static uploads
 app.use(

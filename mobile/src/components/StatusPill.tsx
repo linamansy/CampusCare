@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
 interface StatusPillProps {
   label: string;
@@ -7,9 +7,27 @@ interface StatusPillProps {
 }
 
 export const StatusPill = ({ label, tone = 'muted' }: StatusPillProps) => {
+  const { colors } = useTheme();
+
+  const bgColor: Record<NonNullable<StatusPillProps['tone']>, string> = {
+    primary: colors.primaryContainer,
+    secondary: colors.secondaryContainer,
+    tertiary: colors.tertiaryContainer,
+    error: colors.errorContainer,
+    muted: colors.surfaceHigh,
+  };
+
+  const textColor: Record<NonNullable<StatusPillProps['tone']>, string> = {
+    primary: colors.onPrimary,
+    secondary: colors.onSecondary,
+    tertiary: colors.onTertiary,
+    error: colors.error,
+    muted: colors.textSecondary,
+  };
+
   return (
-    <View style={[styles.base, stylesByTone[tone]]}>
-      <Text style={[styles.label, labelByTone[tone]]}>{label}</Text>
+    <View style={[styles.base, { backgroundColor: bgColor[tone] }]}>
+      <Text style={[styles.label, { color: textColor[tone] }]}>{label}</Text>
     </View>
   );
 };
@@ -26,20 +44,4 @@ const styles = StyleSheet.create({
     fontSize: TypeScale.label,
     letterSpacing: 0.6,
   },
-});
-
-const stylesByTone = StyleSheet.create({
-  primary: { backgroundColor: Colors.primaryContainer },
-  secondary: { backgroundColor: Colors.secondaryContainer },
-  tertiary: { backgroundColor: Colors.tertiaryContainer },
-  error: { backgroundColor: Colors.errorContainer },
-  muted: { backgroundColor: Colors.surfaceHigh },
-});
-
-const labelByTone = StyleSheet.create({
-  primary: { color: Colors.onPrimary },
-  secondary: { color: Colors.onSecondary },
-  tertiary: { color: Colors.onTertiary },
-  error: { color: Colors.error },
-  muted: { color: Colors.textSecondary },
 });

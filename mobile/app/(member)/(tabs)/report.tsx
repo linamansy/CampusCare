@@ -6,9 +6,10 @@ import { AppShell } from '../../../src/components/AppShell';
 import { Button } from '../../../src/components/Button';
 import { Card } from '../../../src/components/Card';
 import { Input } from '../../../src/components/Input';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function ReportIssueScreen() {
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Maintenance');
@@ -80,8 +81,8 @@ export default function ReportIssueScreen() {
         <Input label="Floor" value={floor} onChangeText={setFloor} />
         <Input label="Room" value={room} onChangeText={setRoom} />
         <Button title={image ? 'Change Photo' : 'Upload Photo'} variant="outline" onPress={pickImage} />
-        {image ? <Text style={styles.fileText}>{image.fileName || image.uri}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {image ? <Text style={[styles.fileText, { color: colors.textSecondary }]}>{image.fileName || image.uri}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
         <View style={styles.submitSpacing}>
           <Button title={submitting ? 'Submitting...' : 'Submit Issue'} onPress={handleSubmit} disabled={submitting} />
         </View>
@@ -95,11 +96,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   error: {
     marginTop: Spacing.sm,
-    color: Colors.error,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
   },

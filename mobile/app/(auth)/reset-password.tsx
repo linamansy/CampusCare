@@ -6,11 +6,12 @@ import { Card } from '../../src/components/Card';
 import { Input } from '../../src/components/Input';
 import { Screen } from '../../src/components/Screen';
 import { useAuth } from '../../src/state/auth-context';
-import { Colors, Fonts, Spacing, TypeScale } from '../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../src/theme';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ token?: string }>();
   const { resetPassword } = useAuth();
+  const { colors } = useTheme();
   const [token, setToken] = useState(params.token || '');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -33,13 +34,13 @@ export default function ResetPasswordScreen() {
 
   return (
     <Screen style={styles.screen}>
-      <Text style={styles.title}>Set New Password</Text>
-      <Text style={styles.subtitle}>Use the reset token provided by the backend and choose a new password.</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>Set New Password</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Use the reset token provided by the backend and choose a new password.</Text>
       <Card style={styles.card}>
         <Input label="Reset Token" value={token} onChangeText={setToken} autoCapitalize="none" />
         <Input label="New Password" value={password} onChangeText={setPassword} secureTextEntry />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {message ? <Text style={styles.success}>{message}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
+        {message ? <Text style={[styles.success, { color: colors.secondary }]}>{message}</Text> : null}
         <Button title={submitting ? 'Resetting...' : 'Reset Password'} onPress={handleSubmit} disabled={submitting} />
       </Card>
     </Screen>
@@ -53,13 +54,11 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.headline,
     fontSize: TypeScale.headline,
-    color: Colors.textPrimary,
     marginBottom: Spacing.xs,
   },
   subtitle: {
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
     marginBottom: Spacing.lg,
   },
   card: {
@@ -67,13 +66,11 @@ const styles = StyleSheet.create({
   },
   error: {
     marginBottom: Spacing.md,
-    color: Colors.error,
     fontFamily: Fonts.label,
     fontSize: TypeScale.label,
   },
   success: {
     marginBottom: Spacing.md,
-    color: Colors.secondary,
     fontFamily: Fonts.labelBold,
     fontSize: TypeScale.bodySmall,
   },

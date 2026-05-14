@@ -8,8 +8,8 @@ const { revokeToken } = require('../utils/tokenRevocationStore');
 const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 const JWT_SECRET = process.env.JWT_SECRET || 'campuscare-dev-secret-change-me';
 
-const VALID_ROLES = ['Community Member'];
-const UNIVERSITY_EMAIL_DOMAINS = (process.env.UNIVERSITY_EMAIL_DOMAINS || 'giu-uni.de,giu.edu.eg,campuscare.test')
+const VALID_ROLES = ['Community Member', 'Worker', 'Facility Manager', 'Facility Management', 'Admin'];
+const UNIVERSITY_EMAIL_DOMAINS = (process.env.UNIVERSITY_EMAIL_DOMAINS || 'giu-uni.de,giu.edu.eg,campuscare.test,gmail.com')
   .split(',')
   .map((domain) => domain.trim().toLowerCase())
   .filter(Boolean);

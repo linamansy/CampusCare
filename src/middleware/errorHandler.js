@@ -5,6 +5,8 @@ module.exports = (err, req, res, next) => {
     return next(err);
   }
 
+  console.error('API Error:', err);
+
   let status = 500;
   let message = err.message || 'Server error';
 

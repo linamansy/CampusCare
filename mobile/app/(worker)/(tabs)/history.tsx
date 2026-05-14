@@ -9,10 +9,11 @@ import { ErrorState } from '../../../src/components/ErrorState';
 import { LoadingState } from '../../../src/components/LoadingState';
 import { StatusPill } from '../../../src/components/StatusPill';
 import { useAuth } from '../../../src/state/auth-context';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function WorkerHistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +42,11 @@ export default function WorkerHistoryScreen() {
       ) : (
         history.map((issue) => (
           <Card key={issue.id} style={{ marginBottom: Spacing.md }}>
-            <Text style={{ fontFamily: Fonts.title, fontSize: TypeScale.title, color: Colors.textPrimary }}>{issue.title}</Text>
-            <Text style={{ marginTop: Spacing.xs, fontFamily: Fonts.body, fontSize: TypeScale.bodySmall, color: Colors.textSecondary }}>
+            <Text style={{ fontFamily: Fonts.title, fontSize: TypeScale.title, color: colors.textPrimary }}>{issue.title}</Text>
+            <Text style={{ marginTop: Spacing.xs, fontFamily: Fonts.body, fontSize: TypeScale.bodySmall, color: colors.textSecondary }}>
               {issue.completionNote || issue.description}
             </Text>
-            <Text style={{ marginTop: Spacing.sm, fontFamily: Fonts.label, fontSize: TypeScale.label, color: Colors.textMuted }}>
+            <Text style={{ marginTop: Spacing.sm, fontFamily: Fonts.label, fontSize: TypeScale.label, color: colors.textMuted }}>
               {issue.location}
             </Text>
             <StatusPill label={issue.status} tone="secondary" />

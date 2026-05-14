@@ -8,9 +8,10 @@ import { Card } from '../../../src/components/Card';
 import { EmptyState } from '../../../src/components/EmptyState';
 import { ErrorState } from '../../../src/components/ErrorState';
 import { LoadingState } from '../../../src/components/LoadingState';
-import { Colors, Fonts, Spacing, TypeScale } from '../../../src/theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
 export default function AdminUsersScreen() {
+  const { colors } = useTheme();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +47,10 @@ export default function AdminUsersScreen() {
       ) : (
         users.map((user) => (
           <Card key={user.id} style={styles.card}>
-            <Text style={styles.title}>{user.name}</Text>
-            <Text style={styles.meta}>{user.email}</Text>
-            <Text style={styles.meta}>Role: {user.role}</Text>
-            <Text style={styles.meta}>Active: {user.isActive ? 'Yes' : 'No'} • Verified: {user.isVerified ? 'Yes' : 'No'}</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>{user.name}</Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>{user.email}</Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>Role: {user.role}</Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>Active: {user.isActive ? 'Yes' : 'No'} • Verified: {user.isVerified ? 'Yes' : 'No'}</Text>
             <Button title={user.isActive ? 'Deactivate' : 'Activate'} variant="outline" onPress={async () => {
               if (user.isActive) {
                 await deactivateUser(user.id);
@@ -84,13 +85,11 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-    color: Colors.textPrimary,
   },
   meta: {
     marginTop: Spacing.sm,
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodySmall,
-    color: Colors.textSecondary,
   },
   action: {
     marginTop: Spacing.md,

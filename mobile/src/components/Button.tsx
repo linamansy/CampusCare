@@ -1,5 +1,5 @@
-import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Pressable, StyleSheet, Text, StyleProp, ViewStyle } from 'react-native';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
@@ -12,21 +12,38 @@ interface ButtonProps {
 }
 
 export const Button = ({ title, onPress, variant = 'primary', style, disabled }: ButtonProps) => {
-  const isDisabled = disabled;
+  const { colors } = useTheme();
+
+  const bgColor: Record<ButtonVariant, string> = {
+    primary: colors.primary,
+    secondary: colors.secondary,
+    outline: 'transparent',
+    ghost: colors.surfaceHigh,
+    danger: colors.error,
+  };
+
+  const textColor: Record<ButtonVariant, string> = {
+    primary: colors.onPrimary,
+    secondary: colors.onSecondary,
+    outline: colors.primary,
+    ghost: colors.textPrimary,
+    danger: colors.onError,
+  };
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={isDisabled}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        stylesByVariant[variant],
-        pressed && !isDisabled ? styles.pressed : null,
-        isDisabled ? styles.disabled : null,
+        { backgroundColor: bgColor[variant] },
+        variant === 'outline' && { borderWidth: 1.5, borderColor: colors.primary },
+        pressed && !disabled ? styles.pressed : null,
+        disabled ? styles.disabled : null,
         style,
       ]}
     >
-      <Text style={[styles.label, labelByVariant[variant]]}>{title}</Text>
+      <Text style={[styles.label, { color: textColor[variant] }]}>{title}</Text>
     </Pressable>
   );
 };
@@ -48,43 +65,5 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Fonts.title,
     fontSize: TypeScale.title,
-  },
-});
-
-const stylesByVariant = StyleSheet.create({
-  primary: {
-    backgroundColor: Colors.primary,
-  },
-  secondary: {
-    backgroundColor: Colors.secondary,
-  },
-  outline: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    backgroundColor: 'transparent',
-  },
-  ghost: {
-    backgroundColor: Colors.surfaceHigh,
-  },
-  danger: {
-    backgroundColor: Colors.error,
-  },
-});
-
-const labelByVariant = StyleSheet.create({
-  primary: {
-    color: Colors.onPrimary,
-  },
-  secondary: {
-    color: Colors.onSecondary,
-  },
-  outline: {
-    color: Colors.primary,
-  },
-  ghost: {
-    color: Colors.textPrimary,
-  },
-  danger: {
-    color: Colors.onError,
   },
 });

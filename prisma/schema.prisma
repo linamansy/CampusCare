@@ -10,96 +10,67 @@ datasource db {
 
 model User {
   id                  Int            @id @default(autoincrement())
-
   name                String
   email               String         @unique
   password            String
-
   role                String
-
-  points              Int            @default(0)
-  actsOfServicePoints Int            @default(0)
-
   isActive            Boolean        @default(true)
   isVerified          Boolean        @default(false)
-
-  issues              Issue[]
+  actsOfServicePoints Int            @default(0)
+  points              Int            @default(0)
   comments            Comment[]
-  notifications       Notification[]
-
+  issues              Issue[]
   verifiedIssues      Issue[]        @relation("IssueVerifier")
+  notifications       Notification[]
 }
 
 model Issue {
-  id                  Int            @id @default(autoincrement())
-
-  title               String
-  description         String
-
-  status              String         @default("Submitted/Pending")
-  priority            String         @default("Normal")
-
-  category            String
-
-  location            String
-
-  building            String         @default("")
-  floor               String         @default("")
-  room                String         @default("")
-
-  image               String?
-
-  completionPhotoUrl  String?
-  completionNote      String?
-  rejectionReason     String?
-
-  userId              Int
-  assignedTo          Int?
-
-  resolvedAt          DateTime?
-  verifiedBy          Int?
-
-  comments            Comment[]
-  notifications       Notification[]
-
-  user                User           @relation(fields: [userId], references: [id])
-
-  verifier            User?          @relation("IssueVerifier", fields: [verifiedBy], references: [id])
-
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  id                 Int            @id @default(autoincrement())
+  title              String         @db.VarChar(100)
+  description        String
+  status             String         @default("Submitted/Pending")
+  category           String
+  location           String         @db.VarChar(200)
+  createdAt          DateTime       @default(now())
+  userId             Int
+  building           String         @default("") @db.VarChar(100)
+  floor              String         @default("") @db.VarChar(50)
+  priority           String         @default("Normal")
+  room               String         @default("") @db.VarChar(50)
+  assignedTo         Int?
+  completionNote     String?
+  completionPhotoUrl String?
+  image              String?
+  rejectionReason    String?
+  resolvedAt         DateTime?
+  updatedAt          DateTime       @default(now()) @updatedAt
+  verifiedBy         Int?
+  comments           Comment[]
+  user               User           @relation(fields: [userId], references: [id])
+  verifier           User?          @relation("IssueVerifier", fields: [verifiedBy], references: [id])
+  notifications      Notification[]
 }
 
 model Comment {
-  id                  Int            @id @default(autoincrement())
-
-  text                String
-
-  issueId             Int
-  userId              Int
-
-  issue               Issue          @relation(fields: [issueId], references: [id])
-  user                User           @relation(fields: [userId], references: [id])
-
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  id        Int      @id @default(autoincrement())
+  text      String
+  createdAt DateTime @default(now())
+  issueId   Int
+  userId    Int
+  updatedAt DateTime @default(now()) @updatedAt
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Notification {
-  id                  Int            @id @default(autoincrement())
-
-  userId              Int
-
-  type                String
-  title               String
-  message             String
-
-  issueId             Int?
-
-  isRead              Boolean        @default(false)
-
-  user                User           @relation(fields: [userId], references: [id])
-  issue               Issue?         @relation(fields: [issueId], references: [id])
-
-  createdAt           DateTime       @default(now())
+  id        Int      @id @default(autoincrement())
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    Int
+  issueId   Int?
+  message   String
+  title     String
+  type      String
+  issue     Issue?   @relation(fields: [issueId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }

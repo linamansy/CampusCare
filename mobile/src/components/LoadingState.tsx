@@ -1,11 +1,13 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Colors, Fonts, Spacing, TypeScale } from '../theme';
+import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
 export const LoadingState = ({ label = 'Loading...' }: { label?: string }) => {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={Colors.primary} />
-      <Text style={styles.label}>{label}</Text>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
 };
@@ -21,6 +23,5 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     fontFamily: Fonts.body,
     fontSize: TypeScale.body,
-    color: Colors.textSecondary,
   },
 });
