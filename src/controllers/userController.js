@@ -2,6 +2,44 @@ const prisma = require('../prismaClient');
 
 const bcrypt = require('bcryptjs');
 
+const LEADERBOARD_SELECT = {
+  id: true,
+  name: true,
+  role: true,
+  points: true,
+  actsOfServicePoints: true
+};
+
+exports.getLeaderboard = async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      select: LEADERBOARD_SELECT,
+      orderBy: { points: 'desc' },
+      take: 50
+    });
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getWorkerLeaderboard = async (req, res, next) => {
+  try {
+    const workers = await prisma.user.findMany({
+      where: { role: 'Worker', isActive: true },
+      select: LEADERBOARD_SELECT,
+      orderBy: { points: 'desc' },
+      take: 50
+    });
+
+    res.json({ success: true, data: workers });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const VALID_ROLES = [
   'Community Member',
   'Facility Manager',

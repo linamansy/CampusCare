@@ -69,3 +69,17 @@ export const verifyResolution = async (issueId: number) => {
   const response = await api.post(`/issues/${issueId}/verify`);
   return response.data.data as Issue;
 };
+
+export const fetchCategories = async (): Promise<string[]> => {
+  try {
+    const response = await api.get('/admin/categories');
+    return response.data.categories as string[];
+  } catch {
+    return ['Plumbing', 'Electrical', 'HVAC', 'Cleaning', 'Cleanliness', 'Maintenance', 'Infrastructure', 'Sustainability', 'Other'];
+  }
+};
+
+export const fetchIssueComments = async (issueId: number) => {
+  const response = await api.get(`/issues/${issueId}/comments`);
+  return response.data.data as IssueComment[];
+};

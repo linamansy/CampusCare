@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
 import { fetchAssignedIssues } from '../../../src/api/worker';
 import type { Issue } from '../../../src/api/types';
 import { AppShell } from '../../../src/components/AppShell';
@@ -16,43 +16,70 @@ export default function WorkerHistoryScreen() {
   const { colors } = useTheme();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAssignedIssues(user?.id || 0)
-      .then(setIssues)
-      .catch((err) => setError(err?.response?.data?.error || 'Could not load task history'))
-      .finally(() => setLoading(false));
-  }, [user?.id]);
+  const load = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      setError(null);
+      setIssues(await fetchAssignedIssues(user?.id || 0));
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Could not load task history');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  if (loading) {
-    return <LoadingState label="Loading task history..." />;
-  }
+  useEffect(() => { load(); }, [user?.id]);
 
-  if (error) {
-    return <ErrorState message={error} onRetry={() => {}} />;
-  }
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+  };
 
-  const history = issues.filter((issue) => ['Completed', 'Under Review', 'Resolved', 'Rejected'].includes(issue.status));
+  if (loading) return <LoadingState label="Loading task history..." />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
+
+  const history = issues.filter((i) =>
+    ['Completed', 'Under Review', 'Resolved', 'Rejected'].includes(i.status)
+  );
 
   return (
-    <AppShell title="History" subtitle="Review closed or submitted work history.">
-      {history.length === 0 ? (
-        <EmptyState title="No completed history" subtitle="Completed assignments will be listed here." />
-      ) : (
-        history.map((issue) => (
-          <Card key={issue.id} style={{ marginBottom: Spacing.md }}>
-            <Text style={{ fontFamily: Fonts.title, fontSize: TypeScale.title, color: colors.textPrimary }}>{issue.title}</Text>
-            <Text style={{ marginTop: Spacing.xs, fontFamily: Fonts.body, fontSize: TypeScale.bodySmall, color: colors.textSecondary }}>
-              {issue.completionNote || issue.description}
-            </Text>
-            <Text style={{ marginTop: Spacing.sm, fontFamily: Fonts.label, fontSize: TypeScale.label, color: colors.textMuted }}>
-              {issue.location}
-            </Text>
-            <StatusPill label={issue.status} tone="secondary" />
-          </Card>
-        ))
-      )}
-    </AppShell>
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+    >
+      <AppShell title="Task History" subtitle="Review closed or submitted work history.">
+        {history.length === 0 ? (
+          <EmptyState title="No completed history" subtitle="Completed assignments will be listed here." />
+        ) : (
+          history.map((issue) => (
+            <Card key={issue.id} style={styles.card}>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{issue.title}</Text>
+              <Text style={[styles.body, { color: colors.textSecondary }]}>
+                {issue.completionNote || issue.description}
+              </Text>
+              <Text style={[styles.meta, { color: colors.textMuted }]}>{issue.location}</Text>
+              {issue.resolvedAt ? (
+                <Text style={[styles.meta, { color: colors.textMuted }]}>
+                  Resolved: {new Date(issue.resolvedAt).toLocaleDateString()}
+                </Text>
+              ) : null}
+              <StatusPill label={issue.status} tone={issue.status === 'Resolved' ? 'secondary' : 'primary'} />
+            </Card>
+          ))
+        )}
+      </AppShell>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: { flexGrow: 1 },
+  card: { marginBottom: Spacing.md },
+  title: { fontFamily: Fonts.title, fontSize: TypeScale.title },
+  body: { marginTop: Spacing.xs, fontFamily: Fonts.body, fontSize: TypeScale.bodySmall },
+  meta: { marginTop: Spacing.sm, fontFamily: Fonts.label, fontSize: TypeScale.label },
+});

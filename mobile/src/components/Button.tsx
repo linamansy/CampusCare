@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, StyleProp, ViewStyle } from 'react-native';
 import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning';
 
 interface ButtonProps {
   title: string;
@@ -15,20 +15,28 @@ export const Button = ({ title, onPress, variant = 'primary', style, disabled }:
   const { colors } = useTheme();
 
   const bgColor: Record<ButtonVariant, string> = {
-    primary: colors.primary,
+    primary:   colors.primary,
     secondary: colors.secondary,
-    outline: 'transparent',
-    ghost: colors.surfaceHigh,
-    danger: colors.error,
+    outline:   'transparent',
+    ghost:     colors.surfaceHigh,
+    danger:    colors.error,
+    success:   colors.success,
+    warning:   colors.warning,
   };
 
   const textColor: Record<ButtonVariant, string> = {
-    primary: colors.onPrimary,
+    primary:   colors.onPrimary,
     secondary: colors.onSecondary,
-    outline: colors.primary,
-    ghost: colors.textPrimary,
-    danger: colors.onError,
+    outline:   colors.primary,
+    ghost:     colors.textPrimary,
+    danger:    colors.onError,
+    success:   colors.onSuccess,
+    warning:   colors.onWarning,
   };
+
+  const borderStyle = variant === 'outline'
+    ? { borderWidth: 1.5, borderColor: colors.primary }
+    : undefined;
 
   return (
     <Pressable
@@ -37,7 +45,7 @@ export const Button = ({ title, onPress, variant = 'primary', style, disabled }:
       style={({ pressed }) => [
         styles.base,
         { backgroundColor: bgColor[variant] },
-        variant === 'outline' && { borderWidth: 1.5, borderColor: colors.primary },
+        borderStyle,
         pressed && !disabled ? styles.pressed : null,
         disabled ? styles.disabled : null,
         style,
@@ -58,9 +66,10 @@ const styles = StyleSheet.create({
   },
   pressed: {
     transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   label: {
     fontFamily: Fonts.title,

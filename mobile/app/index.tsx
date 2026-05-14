@@ -20,5 +20,5 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  return <Redirect href={roleToRoute[user.role]} />;
+  return <Redirect href={roleToRoute[user.role] as any} />;
 }

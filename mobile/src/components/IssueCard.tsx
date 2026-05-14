@@ -2,23 +2,34 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Issue } from '../api/types';
 import { Fonts, Spacing, TypeScale, useTheme } from '../theme';
 import { Card } from './Card';
-import { StatusPill } from './StatusPill';
+import { StatusPill, priorityTone, statusTone } from './StatusPill';
 
 interface IssueCardProps {
   issue: Issue;
   onPress?: () => void;
 }
 
+const ACCENT_COLORS: Record<string, string> = {
+  error:     '#DC2626',
+  warning:   '#D97706',
+  primary:   '#1A56DB',
+  secondary: '#7C3AED',
+  tertiary:  '#0891B2',
+  success:   '#059669',
+  muted:     '#94A3B8',
+};
+
 export const IssueCard = ({ issue, onPress }: IssueCardProps) => {
   const { colors } = useTheme();
-  const statusLabel = issue.status?.toUpperCase() || 'PENDING';
-  const tone = issue.priority === 'High' || issue.priority === 'Urgent' ? 'error' : 'primary';
+  const sTone = statusTone(issue.status);
+  const pTone = priorityTone(issue.priority);
+  const accentColor = ACCENT_COLORS[pTone] || colors.primary;
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <Card style={styles.card}>
+      <Card style={[styles.card, { borderLeftColor: accentColor, borderLeftWidth: 4 }]}>
         <View style={styles.header}>
-          <StatusPill label={issue.priority?.toUpperCase() || 'NORMAL'} tone={tone} />
+          <StatusPill label={issue.priority?.toUpperCase() || 'NORMAL'} tone={pTone} />
           <Text style={[styles.dateText, { color: colors.textMuted }]}>
             {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : ''}
           </Text>
@@ -28,8 +39,10 @@ export const IssueCard = ({ issue, onPress }: IssueCardProps) => {
           {issue.description}
         </Text>
         <View style={styles.footer}>
-          <Text style={[styles.location, { color: colors.textSecondary }]}>{issue.location}</Text>
-          <StatusPill label={statusLabel} tone="secondary" />
+          <Text style={[styles.location, { color: colors.textMuted }]}>
+            📍 {issue.location}
+          </Text>
+          <StatusPill label={issue.status?.toUpperCase() || 'PENDING'} tone={sTone} />
         </View>
       </Card>
     </Pressable>
@@ -42,6 +55,8 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: Spacing.md,
+    borderLeftWidth: 4,
+    paddingLeft: 14,
   },
   header: {
     flexDirection: 'row',

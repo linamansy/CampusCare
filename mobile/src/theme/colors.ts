@@ -1,67 +1,111 @@
-const tintColorLight = '#003366';
-const tintColorDark = '#38BDF8';
+const tintColorLight = '#1A56DB';
+const tintColorDark = '#60A5FA';
 
 export const Colors = {
   light: {
-    background: '#F8FAFC', // Paper White
-    surface: '#F8FAFC',
+    // Surfaces
+    background: '#F4F6FF',
+    surface: '#FFFFFF',
     surfaceLowest: '#FFFFFF',
-    surfaceLow: '#F1F5F9', // Light Slate
+    surfaceLow: '#EEF2FF',
     surfaceHigh: '#E2E8F0',
     surfaceHighest: '#CBD5E1',
-    surfaceVariant: '#E2E8F0',
-    outline: '#64748B', // Slate
+    surfaceVariant: '#EEF2FF',
+    outline: '#64748B',
     outlineVariant: '#E2E8F0',
-    textPrimary: '#1E293B', // Deep Slate
+
+    // Text
+    textPrimary: '#1E293B',
     textSecondary: '#64748B',
     textMuted: '#94A3B8',
-    primary: '#003366', // Deep GIU Blue
-    primaryContainer: '#004080',
-    secondary: '#64748B', // Slate
-    secondaryContainer: '#F1F5F9',
-    tertiary: '#0EA5E9', // Blueprint Blue
-    tertiaryContainer: '#E0F2FE',
-    success: '#0EA5E9', // Blueprint Blue for progress
-    error: '#EF4444',
-    errorContainer: '#FEE2E2',
+
+    // Primary — vibrant GIU blue
+    primary: '#1A56DB',
+    primaryContainer: '#DBEAFE',
     onPrimary: '#FFFFFF',
+
+    // Secondary — purple accent
+    secondary: '#7C3AED',
+    secondaryContainer: '#EDE9FE',
     onSecondary: '#FFFFFF',
+
+    // Tertiary — cyan
+    tertiary: '#0891B2',
+    tertiaryContainer: '#CFFAFE',
     onTertiary: '#FFFFFF',
-    onSurface: '#1E293B',
+
+    // Success — emerald green
+    success: '#059669',
+    successContainer: '#D1FAE5',
+    onSuccess: '#FFFFFF',
+
+    // Warning — amber
+    warning: '#D97706',
+    warningContainer: '#FEF3C7',
+    onWarning: '#FFFFFF',
+
+    // Error
+    error: '#DC2626',
+    errorContainer: '#FEE2E2',
     onError: '#FFFFFF',
+
+    // Misc
+    onSurface: '#1E293B',
     tint: tintColorLight,
-    tabIconDefault: '#64748B',
+    tabIconDefault: '#94A3B8',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    background: '#0F172A', // Deep Midnight
-    surface: '#1E293B', // Slate 800
-    surfaceLowest: '#020617', // Black Slate
+    // Surfaces
+    background: '#0F172A',
+    surface: '#1E293B',
+    surfaceLowest: '#0F172A',
     surfaceLow: '#1E293B',
     surfaceHigh: '#334155',
     surfaceHighest: '#475569',
-    surfaceVariant: '#334155',
-    outline: '#94A3B8', // Slate 400
+    surfaceVariant: '#1E1B4B',
+    outline: '#94A3B8',
     outlineVariant: '#334155',
-    textPrimary: '#F8FAFC', // Ghost White
+
+    // Text
+    textPrimary: '#F8FAFC',
     textSecondary: '#94A3B8',
     textMuted: '#64748B',
-    primary: '#38BDF8', // Sky Blue for visibility
-    primaryContainer: '#0369A1',
-    secondary: '#94A3B8',
-    secondaryContainer: '#1E293B',
-    tertiary: '#0EA5E9',
-    tertiaryContainer: '#0C4A6E',
-    success: '#38BDF8',
+
+    // Primary
+    primary: '#60A5FA',
+    primaryContainer: '#1D4ED8',
+    onPrimary: '#FFFFFF',
+
+    // Secondary
+    secondary: '#A78BFA',
+    secondaryContainer: '#4C1D95',
+    onSecondary: '#FFFFFF',
+
+    // Tertiary
+    tertiary: '#22D3EE',
+    tertiaryContainer: '#164E63',
+    onTertiary: '#0F172A',
+
+    // Success
+    success: '#34D399',
+    successContainer: '#064E3B',
+    onSuccess: '#FFFFFF',
+
+    // Warning
+    warning: '#FCD34D',
+    warningContainer: '#78350F',
+    onWarning: '#0F172A',
+
+    // Error
     error: '#F87171',
     errorContainer: '#7F1D1D',
-    onPrimary: '#0F172A',
-    onSecondary: '#0F172A',
-    onTertiary: '#0F172A',
-    onSurface: '#F8FAFC',
     onError: '#FFFFFF',
+
+    // Misc
+    onSurface: '#F8FAFC',
     tint: tintColorDark,
-    tabIconDefault: '#94A3B8',
+    tabIconDefault: '#64748B',
     tabIconSelected: tintColorDark,
   },
 };
