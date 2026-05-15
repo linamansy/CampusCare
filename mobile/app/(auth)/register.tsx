@@ -9,9 +9,9 @@ import { Screen } from '../../src/components/Screen';
 import { useAuth } from '../../src/state/auth-context';
 import { Fonts, Spacing, TypeScale, useTheme } from '../../src/theme';
 
-type SelectableRole = 'Community Member' | 'Worker';
+type SelectableRole = 'Community Member' | 'Worker' | 'Facility Manager';
 
-const ROLES: { value: SelectableRole; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const ROLES: { value: SelectableRole; label: string; description: string; icon: keyof typeof Ionicons.glyphMap; requiresApproval?: boolean }[] = [
   {
     value: 'Community Member',
     label: 'Community Member',
@@ -23,6 +23,14 @@ const ROLES: { value: SelectableRole; label: string; description: string; icon: 
     label: 'Facility Worker',
     description: 'Receive tasks and resolve issues',
     icon: 'construct-outline',
+    requiresApproval: true,
+  },
+  {
+    value: 'Facility Manager',
+    label: 'Facility Manager',
+    description: 'Oversee and manage campus issues',
+    icon: 'business-outline',
+    requiresApproval: true,
   },
 ];
 
@@ -90,10 +98,17 @@ export default function RegisterScreen() {
                     <View style={[styles.roleIcon, { backgroundColor: selected ? colors.primary : colors.surfaceHigh }]}>
                       <Ionicons name={r.icon} size={22} color={selected ? '#fff' : colors.textSecondary} />
                     </View>
+                    <View style={styles.roleTextBlock}>
                     <Text style={[styles.roleCardLabel, { color: selected ? colors.primary : colors.textPrimary }]}>
                       {r.label}
                     </Text>
                     <Text style={[styles.roleCardDesc, { color: colors.textMuted }]}>{r.description}</Text>
+                    {r.requiresApproval ? (
+                      <View style={[styles.approvalBadge, { backgroundColor: colors.warningContainer ?? '#FEF3C7' }]}>
+                        <Text style={[styles.approvalBadgeText, { color: colors.warning }]}>Requires approval</Text>
+                      </View>
+                    ) : null}
+                    </View>
                     {selected ? (
                       <View style={[styles.checkBadge, { backgroundColor: colors.primary }]}>
                         <Ionicons name="checkmark" size={12} color="#fff" />
@@ -129,14 +144,15 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: Spacing.xs, fontFamily: Fonts.body, fontSize: TypeScale.bodySmall },
   card: { padding: Spacing.lg, gap: Spacing.md },
   roleLabel: { fontFamily: Fonts.title, fontSize: TypeScale.body, marginTop: Spacing.sm },
-  roleGrid: { flexDirection: 'row', gap: Spacing.md },
+  roleGrid: { gap: Spacing.sm },
   roleCard: {
-    flex: 1,
     borderWidth: 2,
     borderRadius: 16,
     padding: Spacing.md,
     gap: 6,
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   roleIcon: {
     width: 40,
@@ -144,10 +160,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    flexShrink: 0,
   },
+  roleTextBlock: { flex: 1 },
   roleCardLabel: { fontFamily: Fonts.title, fontSize: TypeScale.bodySmall },
-  roleCardDesc: { fontFamily: Fonts.body, fontSize: 11 },
+  roleCardDesc: { fontFamily: Fonts.body, fontSize: 11, marginTop: 2 },
+  approvalBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  approvalBadgeText: { fontFamily: Fonts.label, fontSize: 10 },
   checkBadge: {
     position: 'absolute',
     top: 8,

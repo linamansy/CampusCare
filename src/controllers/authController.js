@@ -130,13 +130,15 @@ exports.register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const requiresApproval = ['Worker', 'Facility Manager'].includes(selectedRole);
+
     const user = await prisma.user.create({
       data: {
         name: cleanName,
         email: cleanEmail,
         password: hashedPassword,
         role: selectedRole,
-        isVerified: true
+        isVerified: !requiresApproval
       }
     });
 
@@ -297,7 +299,11 @@ exports.login = async (req, res) => {
     }
 
     if (user.isVerified === false) {
-      return res.status(403).json({ error: 'Account is not verified', code: 'ACCOUNT_NOT_VERIFIED' });
+      const pendingRoles = ['Worker', 'Facility Manager'];
+      const message = pendingRoles.includes(user.role)
+        ? 'Your account is pending admin approval. You will be notified once approved.'
+        : 'Account is not verified';
+      return res.status(403).json({ error: message, code: 'ACCOUNT_NOT_VERIFIED' });
     }
 
     res.json({
