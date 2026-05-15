@@ -1,5 +1,13 @@
 import { api } from './client';
-import type { Issue, UserProfile } from './types';
+import type { CompletionAttempt, Issue, UserProfile } from './types';
+
+export interface WorkerPerformance {
+  workerId: number;
+  workerName: string;
+  resolved: number;
+  total: number;
+  points: number;
+}
 
 export interface ManagerAnalyticsResponse {
   summary: {
@@ -10,9 +18,15 @@ export interface ManagerAnalyticsResponse {
     assignedIssues: number;
     unassignedIssues: number;
     activeWorkers: number;
+    avgResolutionDays: number;
+    reworkCount: number;
   };
   issuesByPriority: { priority: string; count: number }[];
   issuesByStatus: { status: string; count: number }[];
+  issuesByCategory: { category: string; count: number }[];
+  issuesByBuilding: { building: string; count: number }[];
+  monthlyTrends: { month: string; count: number }[];
+  workerPerformance: WorkerPerformance[];
 }
 
 export const fetchManagerIssues = async () => {
@@ -83,4 +97,9 @@ export const activateWorker = async (workerId: number) => {
 export const deactivateWorker = async (workerId: number) => {
   const response = await api.put(`/manager/workers/${workerId}/deactivate`);
   return response.data.worker as UserProfile;
+};
+
+export const fetchCompletionAttempts = async (issueId: number) => {
+  const response = await api.get(`/manager/issues/${issueId}/completion-attempts`);
+  return response.data as CompletionAttempt[];
 };

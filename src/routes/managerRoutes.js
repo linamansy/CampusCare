@@ -96,4 +96,10 @@ router.put(
   managerController.deactivateWorker
 );
 
+router.get(
+  '/issues/:id/completion-attempts',
+  requireManagerOrAdmin(),
+  managerController.getCompletionAttempts
+);
+
 module.exports = router;

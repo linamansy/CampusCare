@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import {
   assignIssue,
+  fetchCompletionAttempts,
   fetchManagerIssues,
   fetchWorkers,
   rejectIssue,
@@ -18,7 +20,7 @@ import {
   resolveIssue,
   updateIssuePriority,
 } from '../../../src/api/manager';
-import type { Issue, UserProfile } from '../../../src/api/types';
+import type { CompletionAttempt, Issue, UserProfile } from '../../../src/api/types';
 import { AppShell } from '../../../src/components/AppShell';
 import { Button } from '../../../src/components/Button';
 import { Card } from '../../../src/components/Card';
@@ -51,6 +53,9 @@ export default function ManagerIssuesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [filter, setFilter] = useState<StatusFilter>('All');
+  const [attempts, setAttempts] = useState<Record<number, CompletionAttempt[]>>({});
+  const [loadingAttempts, setLoadingAttempts] = useState<number | null>(null);
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
 
   // Modal states
   const [rejectModalIssueId, setRejectModalIssueId] = useState<number | null>(null);
@@ -78,6 +83,19 @@ export default function ManagerIssuesScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await load(true);
+  };
+
+  const loadAttempts = async (issueId: number) => {
+    if (attempts[issueId]) return;
+    setLoadingAttempts(issueId);
+    try {
+      const data = await fetchCompletionAttempts(issueId);
+      setAttempts((prev) => ({ ...prev, [issueId]: data }));
+    } catch {
+      // ignore
+    } finally {
+      setLoadingAttempts(null);
+    }
   };
 
   const run = async (issueId: number, fn: () => Promise<unknown>) => {
@@ -199,6 +217,15 @@ export default function ManagerIssuesScreen() {
         </Pressable>
       </Modal>
 
+      {/* Photo Lightbox */}
+      <Modal visible={expandedPhoto !== null} transparent animationType="fade" onRequestClose={() => setExpandedPhoto(null)}>
+        <Pressable style={styles.lightboxOverlay} onPress={() => setExpandedPhoto(null)}>
+          {expandedPhoto ? (
+            <Image source={{ uri: expandedPhoto }} style={styles.lightboxImage} resizeMode="contain" />
+          ) : null}
+        </Pressable>
+      </Modal>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -250,6 +277,54 @@ export default function ManagerIssuesScreen() {
                       <Text style={[styles.unassignedLabel, { color: colors.error }]}>Unassigned</Text>
                     )}
                   </View>
+
+                  {/* Completion evidence section */}
+                  {(issue.status === 'Under Review' || issue.status === 'Resolved') && issue.completionPhotoUrl ? (
+                    <View style={[styles.completionSection, { backgroundColor: colors.surfaceLowest, borderColor: colors.surfaceHigh }]}>
+                      <View style={styles.completionHeader}>
+                        <Text style={[styles.completionTitle, { color: colors.textPrimary }]}>Worker Completion</Text>
+                        <Pressable onPress={() => loadAttempts(issue.id)}>
+                          <Text style={[styles.historyLink, { color: colors.primary }]}>
+                            {loadingAttempts === issue.id ? 'Loading...' : attempts[issue.id] ? `${attempts[issue.id].length} attempt(s)` : 'View history'}
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <Pressable onPress={() => setExpandedPhoto(issue.completionPhotoUrl!)}>
+                        <Image source={{ uri: issue.completionPhotoUrl }} style={styles.completionThumb} resizeMode="cover" />
+                        <Text style={[styles.tapHint, { color: colors.textMuted }]}>Tap to expand</Text>
+                      </Pressable>
+                      {issue.completionNote ? (
+                        <Text style={[styles.completionNote, { color: colors.textSecondary }]}>
+                          Note: {issue.completionNote}
+                        </Text>
+                      ) : null}
+                      {attempts[issue.id] && attempts[issue.id].length > 1 ? (
+                        <View style={styles.attemptsRow}>
+                          {attempts[issue.id].map((a, idx) => (
+                            <Pressable key={a.id} onPress={() => a.photoUrl && setExpandedPhoto(a.photoUrl)}>
+                              <View style={[styles.attemptBadge, { backgroundColor: colors.surfaceHigh }]}>
+                                <Text style={[styles.attemptBadgeText, { color: colors.textSecondary }]}>
+                                  Attempt {idx + 1}
+                                </Text>
+                                <Text style={[styles.attemptBadgeDate, { color: colors.textMuted }]}>
+                                  {a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {/* Rejection reason */}
+                  {issue.rejectionReason ? (
+                    <View style={[styles.rejectionBanner, { backgroundColor: colors.errorContainer ?? '#FEE2E2', borderColor: colors.error }]}>
+                      <Text style={[styles.rejectionText, { color: colors.error }]}>
+                        Reason: {issue.rejectionReason}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {/* Action buttons */}
                   <View style={styles.actions}>
@@ -392,4 +467,45 @@ const styles = StyleSheet.create({
   },
   priorityChipText: { fontFamily: Fonts.title, fontSize: TypeScale.bodySmall, color: '#fff' },
   cancelBtn: { marginTop: Spacing.sm },
+  // Completion section
+  completionSection: {
+    marginTop: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  completionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  completionTitle: { fontFamily: Fonts.title, fontSize: TypeScale.bodySmall },
+  historyLink: { fontFamily: Fonts.labelBold, fontSize: TypeScale.label },
+  completionThumb: {
+    width: '100%',
+    height: 160,
+    borderRadius: 10,
+  },
+  tapHint: { fontFamily: Fonts.label, fontSize: 10, marginTop: 4, textAlign: 'center' },
+  completionNote: { fontFamily: Fonts.body, fontSize: TypeScale.label, fontStyle: 'italic' },
+  attemptsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: 4 },
+  attemptBadge: { borderRadius: 8, padding: Spacing.sm, alignItems: 'center' },
+  attemptBadgeText: { fontFamily: Fonts.title, fontSize: TypeScale.label },
+  attemptBadgeDate: { fontFamily: Fonts.label, fontSize: 10 },
+  rejectionBanner: {
+    marginTop: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: Spacing.sm,
+  },
+  rejectionText: { fontFamily: Fonts.label, fontSize: TypeScale.label },
+  // Lightbox
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxImage: { width: '95%', height: '80%' },
 });

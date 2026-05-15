@@ -527,25 +527,64 @@ exports.deactivateWorker = async (req, res) => {
 
 exports.getAnalytics = async (req, res) => {
   try {
-    const [
-      totalIssues,
-      resolvedIssues,
-      rejectedIssues,
-      underReviewIssues,
-      assignedIssues,
-      activeWorkers,
-      issuesByPriority,
-      issuesByStatus
-    ] = await Promise.all([
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Batch 1: counts
+    const [totalIssues, resolvedIssues, rejectedIssues, underReviewIssues, assignedIssues, activeWorkers, reworkCount] = await Promise.all([
       prisma.issue.count(),
       prisma.issue.count({ where: { status: 'Resolved' } }),
       prisma.issue.count({ where: { status: 'Rejected' } }),
       prisma.issue.count({ where: { status: 'Under Review' } }),
       prisma.issue.count({ where: { assignedTo: { not: null } } }),
       prisma.user.count({ where: { role: 'Worker', isActive: true } }),
-      prisma.issue.groupBy({ by: ['priority'], _count: { _all: true } }),
-      prisma.issue.groupBy({ by: ['status'], _count: { _all: true } })
+      prisma.issue.count({ where: { rejectionReason: { not: null } } }),
     ]);
+
+    // Batch 2: groupBy queries
+    const [issuesByPriority, issuesByStatus, issuesByCategory, issuesByBuilding] = await Promise.all([
+      prisma.issue.groupBy({ by: ['priority'], _count: { _all: true } }),
+      prisma.issue.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.issue.groupBy({ by: ['category'], _count: { _all: true } }),
+      prisma.issue.groupBy({ by: ['building'], _count: { _all: true } }),
+    ]);
+
+    // Batch 3: worker data + recent issues
+    const [workers, workerResolvedRaw, workerTotalRaw, resolvedWithTime, recentIssues] = await Promise.all([
+      prisma.user.findMany({ where: { role: 'Worker' }, select: { id: true, name: true, points: true } }),
+      prisma.issue.groupBy({ by: ['assignedTo'], where: { status: 'Resolved', assignedTo: { not: null } }, _count: { _all: true } }),
+      prisma.issue.groupBy({ by: ['assignedTo'], where: { assignedTo: { not: null } }, _count: { _all: true } }),
+      prisma.issue.findMany({ where: { status: 'Resolved', resolvedAt: { not: null } }, select: { createdAt: true, resolvedAt: true } }),
+      prisma.issue.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { createdAt: true } }),
+    ]);
+
+    // Average resolution time in days
+    let avgResolutionDays = 0;
+    if (resolvedWithTime.length > 0) {
+      const totalMs = resolvedWithTime.reduce((sum, i) => sum + (new Date(i.resolvedAt) - new Date(i.createdAt)), 0);
+      avgResolutionDays = Math.round((totalMs / resolvedWithTime.length) / (1000 * 60 * 60 * 24) * 10) / 10;
+    }
+
+    // Monthly trends (last 6 months)
+    const monthMap = {};
+    recentIssues.forEach((i) => {
+      const key = new Date(i.createdAt).toISOString().slice(0, 7);
+      monthMap[key] = (monthMap[key] || 0) + 1;
+    });
+    const monthlyTrends = Object.entries(monthMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, count]) => ({ month, count }));
+
+    // Worker performance
+    const resolvedByWorker = Object.fromEntries(workerResolvedRaw.map((r) => [r.assignedTo, r._count._all]));
+    const totalByWorker = Object.fromEntries(workerTotalRaw.map((r) => [r.assignedTo, r._count._all]));
+    const workerPerformance = workers.map((w) => ({
+      workerId: w.id,
+      workerName: w.name,
+      resolved: resolvedByWorker[w.id] || 0,
+      total: totalByWorker[w.id] || 0,
+      points: w.points,
+    })).filter((w) => w.total > 0);
 
     res.json({
       summary: {
@@ -555,17 +594,34 @@ exports.getAnalytics = async (req, res) => {
         underReviewIssues,
         assignedIssues,
         unassignedIssues: totalIssues - assignedIssues,
-        activeWorkers
+        activeWorkers,
+        avgResolutionDays,
+        reworkCount,
       },
-      issuesByPriority: issuesByPriority.map((item) => ({
-        priority: item.priority,
-        count: item._count._all
-      })),
-      issuesByStatus: issuesByStatus.map((item) => ({
-        status: item.status,
-        count: item._count._all
-      }))
+      issuesByPriority: issuesByPriority.map((item) => ({ priority: item.priority, count: item._count._all })),
+      issuesByStatus: issuesByStatus.map((item) => ({ status: item.status, count: item._count._all })),
+      issuesByCategory: issuesByCategory.map((item) => ({ category: item.category || 'Unknown', count: item._count._all })),
+      issuesByBuilding: issuesByBuilding.filter((item) => item.building).map((item) => ({ building: item.building, count: item._count._all })),
+      monthlyTrends,
+      workerPerformance,
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
+  }
+};
+
+exports.getCompletionAttempts = async (req, res) => {
+  try {
+    const issueId = parsePositiveInt(req.params.id);
+    if (!issueId) return res.status(400).json({ error: 'Invalid issue ID' });
+
+    const attempts = await prisma.completionAttempt.findMany({
+      where: { issueId },
+      orderBy: { createdAt: 'asc' },
+      include: { worker: { select: { id: true, name: true } } },
+    });
+
+    res.json(attempts);
   } catch (error) {
     res.status(500).json({ error: error.message, code: 'SERVER_ERROR' });
   }

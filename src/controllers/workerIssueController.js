@@ -342,6 +342,15 @@ exports.uploadCompletionPhoto =
                 }
               });
 
+            await tx.completionAttempt.create({
+              data: {
+                issueId,
+                workerId,
+                photoUrl: photoUrl || null,
+                note: completionNote || null,
+              }
+            });
+
             // Notify Manager
             await notifyRole({
               role: 'Facility Manager',

@@ -9,46 +9,59 @@ datasource db {
 }
 
 model User {
-  id                  Int            @id @default(autoincrement())
+  id                  Int                  @id @default(autoincrement())
   name                String
-  email               String         @unique
+  email               String               @unique
   password            String
   role                String
-  isActive            Boolean        @default(true)
-  isVerified          Boolean        @default(false)
-  actsOfServicePoints Int            @default(0)
-  points              Int            @default(0)
+  isActive            Boolean              @default(true)
+  isVerified          Boolean              @default(false)
+  actsOfServicePoints Int                  @default(0)
+  points              Int                  @default(0)
   comments            Comment[]
   issues              Issue[]
-  verifiedIssues      Issue[]        @relation("IssueVerifier")
+  verifiedIssues      Issue[]              @relation("IssueVerifier")
   notifications       Notification[]
+  completionAttempts  CompletionAttempt[]  @relation("WorkerAttempts")
 }
 
 model Issue {
-  id                 Int            @id @default(autoincrement())
-  title              String         @db.VarChar(100)
+  id                 Int                  @id @default(autoincrement())
+  title              String               @db.VarChar(100)
   description        String
-  status             String         @default("Submitted/Pending")
+  status             String               @default("Submitted/Pending")
   category           String
-  location           String         @db.VarChar(200)
-  createdAt          DateTime       @default(now())
+  location           String               @db.VarChar(200)
+  createdAt          DateTime             @default(now())
   userId             Int
-  building           String         @default("") @db.VarChar(100)
-  floor              String         @default("") @db.VarChar(50)
-  priority           String         @default("Normal")
-  room               String         @default("") @db.VarChar(50)
+  building           String               @default("") @db.VarChar(100)
+  floor              String               @default("") @db.VarChar(50)
+  priority           String               @default("Normal")
+  room               String               @default("") @db.VarChar(50)
   assignedTo         Int?
   completionNote     String?
   completionPhotoUrl String?
   image              String?
   rejectionReason    String?
   resolvedAt         DateTime?
-  updatedAt          DateTime       @default(now()) @updatedAt
+  updatedAt          DateTime             @default(now()) @updatedAt
   verifiedBy         Int?
   comments           Comment[]
-  user               User           @relation(fields: [userId], references: [id])
-  verifier           User?          @relation("IssueVerifier", fields: [verifiedBy], references: [id])
+  user               User                 @relation(fields: [userId], references: [id])
+  verifier           User?                @relation("IssueVerifier", fields: [verifiedBy], references: [id])
   notifications      Notification[]
+  completionAttempts CompletionAttempt[]
+}
+
+model CompletionAttempt {
+  id        Int      @id @default(autoincrement())
+  issueId   Int
+  workerId  Int
+  photoUrl  String?
+  note      String?
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  worker    User     @relation("WorkerAttempts", fields: [workerId], references: [id])
 }
 
 model Comment {

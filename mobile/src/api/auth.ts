@@ -11,12 +11,12 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   return response.data;
 };
 
-export const register = async (name: string, email: string, password: string) => {
+export const register = async (name: string, email: string, password: string, role: string = 'Community Member') => {
   const response = await api.post('/auth/register', {
     name,
     email,
     password,
-    role: 'Community Member',
+    role,
   });
   return response.data;
 };

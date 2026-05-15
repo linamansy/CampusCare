@@ -11,6 +11,16 @@ export interface UserProfile {
   actsOfServicePoints?: number;
 }
 
+export interface CompletionAttempt {
+  id: number;
+  issueId: number;
+  workerId: number;
+  photoUrl?: string | null;
+  note?: string | null;
+  createdAt?: string;
+  worker?: { id: number; name: string };
+}
+
 export interface Issue {
   id: number;
   title: string;
@@ -34,6 +44,7 @@ export interface Issue {
   resolvedAt?: string | null;
   user?: UserProfile;
   comments?: IssueComment[];
+  completionAttempts?: CompletionAttempt[];
 }
 
 export interface IssueComment {

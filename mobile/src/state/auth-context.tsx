@@ -12,7 +12,7 @@ interface AuthState {
   token: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   sendOtp: (email: string) => Promise<void>;
@@ -71,8 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await persistSession(response.accessToken, response.user);
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    await AuthApi.register(name, email, password);
+  const register = useCallback(async (name: string, email: string, password: string, role?: string) => {
+    await AuthApi.register(name, email, password, role);
   }, []);
 
   const signOut = useCallback(async () => {
