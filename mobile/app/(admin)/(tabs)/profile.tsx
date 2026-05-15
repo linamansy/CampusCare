@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppShell } from '../../../src/components/AppShell';
 import { Button } from '../../../src/components/Button';
 import { Card } from '../../../src/components/Card';
-import { InfoBanner } from '../../../src/components/InfoBanner';
 import { useAuth } from '../../../src/state/auth-context';
 import { Fonts, Spacing, TypeScale, useTheme } from '../../../src/theme';
 
@@ -31,10 +30,6 @@ export default function AdminProfileScreen() {
           ))}
         </View>
       </Card>
-      <InfoBanner
-        title="Category management"
-        message="The backend currently has no admin category-management endpoint. This profile screen calls that out directly instead of faking unavailable controls."
-      />
       <Button title="Logout" variant="outline" onPress={signOut} />
     </AppShell>
   );
