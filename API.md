@@ -44,7 +44,7 @@ Create a new user account.
 
 Valid roles: `Community Member`, `Worker`, `Facility Manager`, `Admin`
 
-> **Note:** `Worker` and `Facility Manager` accounts are created with `isVerified: false` and require Admin approval before they can log in. `Community Member` accounts are immediately active.
+>> **Note:** `Worker` and `Facility Manager` accounts are created with `isVerified: false` and require Admin approval before accessing the system. `Community Member` accounts are automatically verified upon registration.
 
 **Response `201`:**
 ```json
@@ -153,53 +153,6 @@ Get the currently authenticated user's profile.
   }
 }
 ```
-
----
-
-### POST `/api/auth/send-otp`
-
-Send a one-time password to an email address.
-
-**Auth required:** No  
-**Rate limited:** Yes
-
-**Request body:**
-```json
-{ "email": "string" }
-```
-
-**Response `200`:**
-```json
-{
-  "message": "OTP sent successfully",
-  "otp": "123456"
-}
-```
-> In development the OTP is returned directly. In production, remove it from the response.
-
----
-
-### POST `/api/auth/verify-otp`
-
-Verify an OTP and mark the account as verified.
-
-**Auth required:** No  
-**Rate limited:** Yes
-
-**Request body:**
-```json
-{
-  "email": "string",
-  "otp": "string"
-}
-```
-
-**Response `200`:**
-```json
-{ "message": "OTP verified successfully" }
-```
-
-**Errors:** `400` — OTP expired / Invalid OTP / No OTP found for this email
 
 ---
 
@@ -344,7 +297,7 @@ Add a comment to an issue.
 
 ### POST `/api/issues/:id/verify`
 
-Community Member confirms that a resolved issue has been fixed.
+> Used after the issue has been marked as `Resolved` by Facility Management to allow the original reporter to confirm satisfaction with the resolution.
 
 **Auth required:** Yes
 
@@ -730,19 +683,6 @@ Cannot change your own role.
 
 ---
 
-### PUT `/api/admin/users/:id/reset-password`
-
-Reset any user's password.
-
-**Request body:**
-```json
-{ "newPassword": "string (min 6 chars)" }
-```
-
-**Response `200`:**
-```json
-{ "message": "Password reset successfully", "user": { ...UserProfile } }
-```
 
 ---
 
@@ -1084,7 +1024,7 @@ Assigned          → Rejected              (manager rejects)
 
 ## 9. Points System
 
-Workers earn points for completing tasks:
+Workers earn points for completing tasks, while Community Members may receive Acts of Service points for valid issue reports.
 
 | Action | Points |
 |--------|--------|
