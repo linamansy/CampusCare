@@ -29,7 +29,7 @@
 | `Community Member` | Reports issues, comments, verifies resolutions |
 | `Worker` | Receives assigned tasks, submits completion evidence |
 | `Facility Manager` | Assigns/manages issues, reviews completions |
-| `Admin` | Full user management, category management |
+| `Admin` | User management, approvals, activation control, role management, and category management |
 
 ---
 
@@ -78,7 +78,7 @@ Creates a new user account.
 }
 ```
 
-> **Note:** `Worker` and `Facility Manager` registrations set `isVerified: false` — they require Admin approval before they can log in.
+> **Note:** Worker and Facility Manager registrations set isVerified: false and require Admin approval before accessing the system. Community Member accounts are automatically verified upon registration.
 
 **Error Responses:**
 
@@ -188,28 +188,6 @@ Returns the authenticated user's profile, including points.
 
 ---
 
-### POST `/api/auth/send-otp`
-
-Generates a 6-digit OTP for the given email (OTP valid for 10 minutes). For development, the OTP is returned in the response body.
-
-**Request Body:** `{ "email": "string" }`
-
-**Success Response (200):**
-```json
-{ "message": "OTP sent successfully", "otp": "482931" }
-```
-
----
-
-### POST `/api/auth/verify-otp`
-
-Verifies the OTP and marks the user as verified.
-
-**Request Body:** `{ "email": "string", "otp": "string" }`
-
-**Success Response (200):** `{ "message": "OTP verified successfully" }`
-
----
 
 ### POST `/api/auth/forgot-password`
 
@@ -244,7 +222,7 @@ Resets the user's password using a valid reset token.
 Returns issues based on the authenticated user's role:
 - `Community Member` → their own issues only
 - `Worker` → issues assigned to them
-- `Facility Manager` / `Admin` → all issues
+- `Facility Manager`→ all issues
 
 **Authentication:** Required (any role)
 
@@ -394,7 +372,9 @@ Adds a comment to an issue.
 
 ### PATCH `/api/issues/:id/verify`
 
-Community Member verifies that their reported issue has been resolved. Awards `actsOfServicePoints` to the worker.
+after the issue has been marked as Resolved by Facility Management to allow the original reporter to confirm satisfaction with the resolution.
+
+When verification is successful, the verifiedBy field stores the ID of the Community Member who confirmed the resolution.
 
 **Authentication:** Required (Community Member — must own the issue)
 
@@ -734,8 +714,96 @@ Any Status         →  [Manager: Reject]          →  Rejected
 ---
 
 # 4.3 Database Schema Documentation
+https://drive.google.com/file/d/1VRTZVEpMxx2vSeki4LbNbfNLPqQbJNE1/view?usp=sharing
+PICTURE
 
 ## Entity-Relationship Diagram
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.Comment (
+  id integer NOT NULL DEFAULT nextval('"Comment_id_seq"'::regclass),
+  text text NOT NULL,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  issueId integer NOT NULL,
+  userId integer NOT NULL,
+  updatedAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT Comment_pkey PRIMARY KEY (id),
+  CONSTRAINT Comment_issueId_fkey FOREIGN KEY (issueId) REFERENCES public.Issue(id),
+  CONSTRAINT Comment_userId_fkey FOREIGN KEY (userId) REFERENCES public.User(id)
+);
+CREATE TABLE public.CompletionAttempt (
+  id integer NOT NULL DEFAULT nextval('"CompletionAttempt_id_seq"'::regclass),
+  issueId integer NOT NULL,
+  workerId integer NOT NULL,
+  photoUrl text,
+  note text,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT CompletionAttempt_pkey PRIMARY KEY (id),
+  CONSTRAINT CompletionAttempt_issueId_fkey FOREIGN KEY (issueId) REFERENCES public.Issue(id),
+  CONSTRAINT CompletionAttempt_workerId_fkey FOREIGN KEY (workerId) REFERENCES public.User(id)
+);
+CREATE TABLE public.Issue (
+  id integer NOT NULL DEFAULT nextval('"Issue_id_seq"'::regclass),
+  title character varying NOT NULL,
+  description text NOT NULL,
+  status text NOT NULL DEFAULT 'Submitted/Pending'::text,
+  category text NOT NULL,
+  location character varying NOT NULL,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  userId integer NOT NULL,
+  building character varying NOT NULL DEFAULT ''::text,
+  floor character varying NOT NULL DEFAULT ''::text,
+  priority text NOT NULL DEFAULT 'Normal'::text,
+  room character varying NOT NULL DEFAULT ''::text,
+  assignedTo integer,
+  completionNote text,
+  completionPhotoUrl text,
+  image text,
+  rejectionReason text,
+  resolvedAt timestamp without time zone,
+  updatedAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  verifiedBy integer,
+  CONSTRAINT Issue_pkey PRIMARY KEY (id),
+  CONSTRAINT Issue_userId_fkey FOREIGN KEY (userId) REFERENCES public.User(id),
+  CONSTRAINT Issue_verifiedBy_fkey FOREIGN KEY (verifiedBy) REFERENCES public.User(id)
+);
+CREATE TABLE public.Notification (
+  id integer NOT NULL DEFAULT nextval('"Notification_id_seq"'::regclass),
+  isRead boolean NOT NULL DEFAULT false,
+  createdAt timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  userId integer NOT NULL,
+  issueId integer,
+  message text NOT NULL,
+  title text NOT NULL,
+  type text NOT NULL,
+  CONSTRAINT Notification_pkey PRIMARY KEY (id),
+  CONSTRAINT Notification_userId_fkey FOREIGN KEY (userId) REFERENCES public.User(id),
+  CONSTRAINT Notification_issueId_fkey FOREIGN KEY (issueId) REFERENCES public.Issue(id)
+);
+CREATE TABLE public.User (
+  id integer NOT NULL DEFAULT nextval('"User_id_seq"'::regclass),
+  name text NOT NULL,
+  email text NOT NULL,
+  password text NOT NULL,
+  role text NOT NULL,
+  isActive boolean NOT NULL DEFAULT true,
+  isVerified boolean NOT NULL DEFAULT false,
+  actsOfServicePoints integer NOT NULL DEFAULT 0,
+  points integer NOT NULL DEFAULT 0,
+  CONSTRAINT User_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public._prisma_migrations (
+  id character varying NOT NULL,
+  checksum character varying NOT NULL,
+  finished_at timestamp with time zone,
+  migration_name character varying NOT NULL,
+  logs text,
+  rolled_back_at timestamp with time zone,
+  started_at timestamp with time zone NOT NULL DEFAULT now(),
+  applied_steps_count integer NOT NULL DEFAULT 0,
+  CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id)
+);
 
 ```mermaid
 erDiagram
@@ -747,8 +815,8 @@ erDiagram
         String  role                    "Community Member | Worker | Facility Manager | Admin"
         Boolean isActive                "default true"
         Boolean isVerified              "default false"
-        Int     actsOfServicePoints     "default 0 — awarded when member verifies resolution"
-        Int     points                  "default 0 — awarded when manager approves completion"
+   Int     actsOfServicePoints     "default 0 — gamification reward points"
+       Int     points                  "default 0 — worker performance points"
     }
 
     ISSUE {
@@ -912,8 +980,11 @@ The following accounts are pre-created for testing and demonstration:
 |---|---|---|---|---|
 | wello | `wello@campuscare.test` | `password123` | Admin | Yes |
 | Sara Ahmed | `sara@giu-uni.de` | `password123` | Community Member | Yes |
+|lina khaled mansy| `linamansy3@gmail.com| `linalolo2006`| Community Member| Yes|
 | Omar Khaled | `omar@giu-uni.de` | `password123` | Worker | Yes |
+| mohamed worker| mohamedworker@gmail.com|`mohamed123`| Worker| Yes|
 | Lina Manager | `lina@giu-uni.de` | `password123` | Facility Manager | Yes |
+ |ali manager |`ali@gmail.com`| `ali123`| Facility Manager| yes|
 
 > To create additional seed data, run the `createVerifiedUser.js` script from the project root:
 > ```bash
@@ -1145,7 +1216,7 @@ CampusCare/                        ← Project root
 │
 ├── src/
 │   ├── controllers/               ← Business logic, one file per domain
-│   │   ├── authController.js      ← Register, login, logout, me, OTP, password reset
+│   │   ├── authController.js      ←Register, login, logout, profile, and password reset logic
 │   │   ├── managerController.js   ← Issue management, worker assignment, analytics
 │   │   ├── workerIssueController.js ← Start work, submit completion evidence
 │   │   ├── userController.js      ← Leaderboard endpoints
